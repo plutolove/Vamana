@@ -1,6 +1,6 @@
-#include "exception_base.h"
-
 #include <typeinfo>
+
+#include "exception_base.h"
 
 ExceptionBase::ExceptionBase(int code) : _pNested(0), _code(code) {}
 

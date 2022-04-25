@@ -185,7 +185,8 @@ ALWAYS_INLINE __m256 _mm256_sqdf_ps(__m256 X, __m256 Y) {
     result = acc(result, exec(c1, c2));                     \
   }
 
-float ComputeL2Distance_SSE(const int8_t* pX, const int8_t* pY, size_t length) {
+ALWAYS_INLINE float ComputeL2Distance_SSE(const int8_t* pX, const int8_t* pY,
+                                          size_t length) {
   const int8_t* pEnd32 = pX + ((length >> 5) << 5);
   const int8_t* pEnd16 = pX + ((length >> 4) << 4);
   const int8_t* pEnd4 = pX + ((length >> 2) << 2);
@@ -221,7 +222,8 @@ float ComputeL2Distance_SSE(const int8_t* pX, const int8_t* pY, size_t length) {
   return diff;
 }
 
-float ComputeL2Distance_AVX(const int8_t* pX, const int8_t* pY, size_t length) {
+ALWAYS_INLINE float ComputeL2Distance_AVX(const int8_t* pX, const int8_t* pY,
+                                          size_t length) {
   const int8_t* pEnd32 = pX + ((length >> 5) << 5);
   const int8_t* pEnd16 = pX + ((length >> 4) << 4);
   const int8_t* pEnd4 = pX + ((length >> 2) << 2);
@@ -257,8 +259,8 @@ float ComputeL2Distance_AVX(const int8_t* pX, const int8_t* pY, size_t length) {
   return diff;
 }
 
-float ComputeL2Distance_SSE(const uint8_t* pX, const uint8_t* pY,
-                            size_t length) {
+ALWAYS_INLINE float ComputeL2Distance_SSE(const uint8_t* pX, const uint8_t* pY,
+                                          size_t length) {
   const uint8_t* pEnd32 = pX + ((length >> 5) << 5);
   const uint8_t* pEnd16 = pX + ((length >> 4) << 4);
   const uint8_t* pEnd4 = pX + ((length >> 2) << 2);
@@ -294,8 +296,8 @@ float ComputeL2Distance_SSE(const uint8_t* pX, const uint8_t* pY,
   return diff;
 }
 
-float ComputeL2Distance_AVX(const uint8_t* pX, const uint8_t* pY,
-                            size_t length) {
+ALWAYS_INLINE float ComputeL2Distance_AVX(const uint8_t* pX, const uint8_t* pY,
+                                          size_t length) {
   const uint8_t* pEnd32 = pX + ((length >> 5) << 5);
   const uint8_t* pEnd16 = pX + ((length >> 4) << 4);
   const uint8_t* pEnd4 = pX + ((length >> 2) << 2);
@@ -331,8 +333,8 @@ float ComputeL2Distance_AVX(const uint8_t* pX, const uint8_t* pY,
   return diff;
 }
 
-float ComputeL2Distance_SSE(const int16_t* pX, const int16_t* pY,
-                            size_t length) {
+ALWAYS_INLINE float ComputeL2Distance_SSE(const int16_t* pX, const int16_t* pY,
+                                          size_t length) {
   const int16_t* pEnd16 = pX + ((length >> 4) << 4);
   const int16_t* pEnd8 = pX + ((length >> 3) << 3);
   const int16_t* pEnd4 = pX + ((length >> 2) << 2);
@@ -369,8 +371,8 @@ float ComputeL2Distance_SSE(const int16_t* pX, const int16_t* pY,
   return diff;
 }
 
-float ComputeL2Distance_AVX(const int16_t* pX, const int16_t* pY,
-                            size_t length) {
+ALWAYS_INLINE float ComputeL2Distance_AVX(const int16_t* pX, const int16_t* pY,
+                                          size_t length) {
   const int16_t* pEnd16 = pX + ((length >> 4) << 4);
   const int16_t* pEnd8 = pX + ((length >> 3) << 3);
   const int16_t* pEnd4 = pX + ((length >> 2) << 2);
@@ -407,7 +409,8 @@ float ComputeL2Distance_AVX(const int16_t* pX, const int16_t* pY,
   return diff;
 }
 
-float ComputeL2Distance_SSE(const float* pX, const float* pY, size_t length) {
+ALWAYS_INLINE float ComputeL2Distance_SSE(const float* pX, const float* pY,
+                                          size_t length) {
   const float* pEnd16 = pX + ((length >> 4) << 4);
   const float* pEnd4 = pX + ((length >> 2) << 2);
   const float* pEnd1 = pX + length;
@@ -436,7 +439,8 @@ float ComputeL2Distance_SSE(const float* pX, const float* pY, size_t length) {
   return diff;
 }
 
-float ComputeL2Distance_AVX(const float* pX, const float* pY, size_t length) {
+ALWAYS_INLINE float ComputeL2Distance_AVX(const float* pX, const float* pY,
+                                          size_t length) {
   const float* pEnd16 = pX + ((length >> 4) << 4);
   const float* pEnd4 = pX + ((length >> 2) << 2);
   const float* pEnd1 = pX + length;
@@ -463,8 +467,8 @@ float ComputeL2Distance_AVX(const float* pX, const float* pY, size_t length) {
   return diff;
 }
 
-float ComputeCosineDistance_SSE(const int8_t* pX, const int8_t* pY,
-                                size_t length) {
+ALWAYS_INLINE float ComputeCosineDistance_SSE(const int8_t* pX,
+                                              const int8_t* pY, size_t length) {
   const int8_t* pEnd32 = pX + ((length >> 5) << 5);
   const int8_t* pEnd16 = pX + ((length >> 4) << 4);
   const int8_t* pEnd4 = pX + ((length >> 2) << 2);
@@ -497,8 +501,8 @@ float ComputeCosineDistance_SSE(const int8_t* pX, const int8_t* pY,
   return 16129 - diff;
 }
 
-float ComputeCosineDistance_AVX(const int8_t* pX, const int8_t* pY,
-                                size_t length) {
+ALWAYS_INLINE float ComputeCosineDistance_AVX(const int8_t* pX,
+                                              const int8_t* pY, size_t length) {
   const int8_t* pEnd32 = pX + ((length >> 5) << 5);
   const int8_t* pEnd16 = pX + ((length >> 4) << 4);
   const int8_t* pEnd4 = pX + ((length >> 2) << 2);
@@ -531,8 +535,9 @@ float ComputeCosineDistance_AVX(const int8_t* pX, const int8_t* pY,
   return 16129 - diff;
 }
 
-float ComputeCosineDistance_SSE(const uint8_t* pX, const uint8_t* pY,
-                                size_t length) {
+ALWAYS_INLINE float ComputeCosineDistance_SSE(const uint8_t* pX,
+                                              const uint8_t* pY,
+                                              size_t length) {
   const uint8_t* pEnd32 = pX + ((length >> 5) << 5);
   const uint8_t* pEnd16 = pX + ((length >> 4) << 4);
   const uint8_t* pEnd4 = pX + ((length >> 2) << 2);
@@ -565,8 +570,9 @@ float ComputeCosineDistance_SSE(const uint8_t* pX, const uint8_t* pY,
   return 65025 - diff;
 }
 
-float ComputeCosineDistance_AVX(const uint8_t* pX, const uint8_t* pY,
-                                size_t length) {
+ALWAYS_INLINE float ComputeCosineDistance_AVX(const uint8_t* pX,
+                                              const uint8_t* pY,
+                                              size_t length) {
   const uint8_t* pEnd32 = pX + ((length >> 5) << 5);
   const uint8_t* pEnd16 = pX + ((length >> 4) << 4);
   const uint8_t* pEnd4 = pX + ((length >> 2) << 2);
@@ -599,8 +605,9 @@ float ComputeCosineDistance_AVX(const uint8_t* pX, const uint8_t* pY,
   return 65025 - diff;
 }
 
-float ComputeCosineDistance_SSE(const int16_t* pX, const int16_t* pY,
-                                size_t length) {
+ALWAYS_INLINE float ComputeCosineDistance_SSE(const int16_t* pX,
+                                              const int16_t* pY,
+                                              size_t length) {
   const int16_t* pEnd16 = pX + ((length >> 4) << 4);
   const int16_t* pEnd8 = pX + ((length >> 3) << 3);
   const int16_t* pEnd4 = pX + ((length >> 2) << 2);
@@ -634,8 +641,9 @@ float ComputeCosineDistance_SSE(const int16_t* pX, const int16_t* pY,
   return 1073676289 - diff;
 }
 
-float ComputeCosineDistance_AVX(const int16_t* pX, const int16_t* pY,
-                                size_t length) {
+ALWAYS_INLINE float ComputeCosineDistance_AVX(const int16_t* pX,
+                                              const int16_t* pY,
+                                              size_t length) {
   const int16_t* pEnd16 = pX + ((length >> 4) << 4);
   const int16_t* pEnd8 = pX + ((length >> 3) << 3);
   const int16_t* pEnd4 = pX + ((length >> 2) << 2);
@@ -669,8 +677,8 @@ float ComputeCosineDistance_AVX(const int16_t* pX, const int16_t* pY,
   return 1073676289 - diff;
 }
 
-float ComputeCosineDistance_SSE(const float* pX, const float* pY,
-                                size_t length) {
+ALWAYS_INLINE float ComputeCosineDistance_SSE(const float* pX, const float* pY,
+                                              size_t length) {
   const float* pEnd16 = pX + ((length >> 4) << 4);
   const float* pEnd4 = pX + ((length >> 2) << 2);
   const float* pEnd1 = pX + length;
@@ -696,8 +704,8 @@ float ComputeCosineDistance_SSE(const float* pX, const float* pY,
   return 1 - diff;
 }
 
-float ComputeCosineDistance_AVX(const float* pX, const float* pY,
-                                size_t length) {
+ALWAYS_INLINE float ComputeCosineDistance_AVX(const float* pX, const float* pY,
+                                              size_t length) {
   const float* pEnd16 = pX + ((length >> 4) << 4);
   const float* pEnd4 = pX + ((length >> 2) << 2);
   const float* pEnd1 = pX + length;
