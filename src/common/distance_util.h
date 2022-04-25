@@ -1,10 +1,8 @@
 #include <immintrin.h>
+
 #include <cstdint>
 
 #include "common/define.h"
-
-#define DIFF128 diff128
-#define DIFF256 diff256
 
 ALWAYS_INLINE __m128 _mm_mul_epi8(__m128i X, __m128i Y) {
   __m128i zero = _mm_setzero_si128();
@@ -204,7 +202,7 @@ float ComputeL2Distance_SSE(const int8_t* pX, const int8_t* pY, size_t length) {
     REPEAT(__m128i, __m128i, 16, _mm_loadu_si128, _mm_sqdf_epi8, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd4) {
     float c1 = ((float)(*pX++) - (float)(*pY++));
@@ -240,7 +238,7 @@ float ComputeL2Distance_AVX(const int8_t* pX, const int8_t* pY, size_t length) {
     REPEAT(__m128i, __m128i, 16, _mm_loadu_si128, _mm_sqdf_epi8, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd4) {
     float c1 = ((float)(*pX++) - (float)(*pY++));
@@ -277,7 +275,7 @@ float ComputeL2Distance_SSE(const uint8_t* pX, const uint8_t* pY,
     REPEAT(__m128i, __m128i, 16, _mm_loadu_si128, _mm_sqdf_epu8, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd4) {
     float c1 = ((float)(*pX++) - (float)(*pY++));
@@ -314,7 +312,7 @@ float ComputeL2Distance_AVX(const uint8_t* pX, const uint8_t* pY,
     REPEAT(__m128i, __m128i, 16, _mm_loadu_si128, _mm_sqdf_epu8, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd4) {
     float c1 = ((float)(*pX++) - (float)(*pY++));
@@ -351,7 +349,7 @@ float ComputeL2Distance_SSE(const int16_t* pX, const int16_t* pY,
     REPEAT(__m128i, __m128i, 8, _mm_loadu_si128, _mm_sqdf_epi16, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd4) {
     float c1 = ((float)(*pX++) - (float)(*pY++));
@@ -389,7 +387,7 @@ float ComputeL2Distance_AVX(const int16_t* pX, const int16_t* pY,
     REPEAT(__m128i, __m128i, 8, _mm_loadu_si128, _mm_sqdf_epi16, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd4) {
     float c1 = ((float)(*pX++) - (float)(*pY++));
@@ -429,7 +427,7 @@ float ComputeL2Distance_SSE(const float* pX, const float* pY, size_t length) {
     REPEAT(__m128, const float, 4, _mm_loadu_ps, _mm_sqdf_ps, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd1) {
     float c1 = (*pX++) - (*pY++);
@@ -456,7 +454,7 @@ float ComputeL2Distance_AVX(const float* pX, const float* pY, size_t length) {
     REPEAT(__m128, const float, 4, _mm_loadu_ps, _mm_sqdf_ps, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd1) {
     float c1 = (*pX++) - (*pY++);
@@ -483,7 +481,7 @@ float ComputeCosineDistance_SSE(const int8_t* pX, const int8_t* pY,
     REPEAT(__m128i, __m128i, 16, _mm_loadu_si128, _mm_mul_epi8, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd4) {
     float c1 = ((float)(*pX++) * (float)(*pY++));
@@ -517,7 +515,7 @@ float ComputeCosineDistance_AVX(const int8_t* pX, const int8_t* pY,
     REPEAT(__m128i, __m128i, 16, _mm_loadu_si128, _mm_mul_epi8, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd4) {
     float c1 = ((float)(*pX++) * (float)(*pY++));
@@ -551,7 +549,7 @@ float ComputeCosineDistance_SSE(const uint8_t* pX, const uint8_t* pY,
     REPEAT(__m128i, __m128i, 16, _mm_loadu_si128, _mm_mul_epu8, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd4) {
     float c1 = ((float)(*pX++) * (float)(*pY++));
@@ -585,7 +583,7 @@ float ComputeCosineDistance_AVX(const uint8_t* pX, const uint8_t* pY,
     REPEAT(__m128i, __m128i, 16, _mm_loadu_si128, _mm_mul_epu8, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd4) {
     float c1 = ((float)(*pX++) * (float)(*pY++));
@@ -619,7 +617,7 @@ float ComputeCosineDistance_SSE(const int16_t* pX, const int16_t* pY,
     REPEAT(__m128i, __m128i, 8, _mm_loadu_si128, _mm_mul_epi16, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd4) {
     float c1 = ((float)(*pX++) * (float)(*pY++));
@@ -654,7 +652,7 @@ float ComputeCosineDistance_AVX(const int16_t* pX, const int16_t* pY,
     REPEAT(__m128i, __m128i, 8, _mm_loadu_si128, _mm_mul_epi16, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd4) {
     float c1 = ((float)(*pX++) * (float)(*pY++));
@@ -692,7 +690,7 @@ float ComputeCosineDistance_SSE(const float* pX, const float* pY,
     REPEAT(__m128, const float, 4, _mm_loadu_ps, _mm_mul_ps, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd1) diff += (*pX++) * (*pY++);
   return 1 - diff;
@@ -717,7 +715,7 @@ float ComputeCosineDistance_AVX(const float* pX, const float* pY,
     REPEAT(__m128, const float, 4, _mm_loadu_ps, _mm_mul_ps, _mm_add_ps,
            diff128)
   }
-  float diff = DIFF128[0] + DIFF128[1] + DIFF128[2] + DIFF128[3];
+  float diff = diff128[0] + diff128[1] + diff128[2] + diff128[3];
 
   while (pX < pEnd1) diff += (*pX++) * (*pY++);
   return 1 - diff;
