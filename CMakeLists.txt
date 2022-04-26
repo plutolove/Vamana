@@ -15,3 +15,6 @@ file(GLOB_RECURSE SRC ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/*/*.
 add_executable(Vamana ${SRC})
 target_link_libraries(Vamana ${Boost_LIBRARIES} fmt-header-only)
 target_compile_options(Vamana PRIVATE -mavx2 -mavx -msse -msse2 -fPIC)
+
+add_executable(gen_data ${CMAKE_SOURCE_DIR}/tools/gen_data.cpp)
+add_executable(read_data ${CMAKE_SOURCE_DIR}/tools/read_data.cpp)
