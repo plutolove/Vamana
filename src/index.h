@@ -24,6 +24,9 @@ struct Entry {
 
 template <typename T, typename DistCalc>
 class VamanaIndex : boost::noncopyable {
+  // <dist, idx>
+  using PI = std::pair<T, size_t>;
+
  public:
   VamanaIndex(const IndexOption<DistCalc>& option) : option(option) {
     loadData();
@@ -34,14 +37,15 @@ class VamanaIndex : boost::noncopyable {
     std::uniform_int_distribution<int> dist(0, option.N - 1);
     // 初始化随机图
     _graph.resize(option.N);
-    for (auto& child : _graph) {
+    for (size_t i = 0; i < _graph.size(); i++) {
+      auto& child = _graph[i];
       child.reserve(option.R);
       size_t cnt = option.R;
       std::unordered_set<size_t> gen_child;
       while (cnt--) {
-        // 随机图中的child节点不重复
+        // 随机图中的child节点不重复，同时节点编号不是自己
         size_t idx = dist(generator);
-        if (gen_child.count(idx)) continue;
+        if (gen_child.count(idx) || idx == i) continue;
         gen_child.insert(idx);
         child.emplace_back(idx);
       }
@@ -73,21 +77,19 @@ class VamanaIndex : boost::noncopyable {
     std::cout << fmt::format("calcCentroid idx: {}, dist: {}\n", idx, dist);
     return idx;
   }
+
   // 起点，查询点，top k， search list size， topk res，vis list
-  size_t bfs_search(size_t s, const T* q, size_t k, size_t L,
-                    std::vector<size_t>& knn, std::vector<size_t>& V) {
+  size_t bfsSearch(size_t s, const T* q, size_t k, size_t L,
+                   std::set<std::pair<T, size_t>>& topk,
+                   std::set<std::pair<T, size_t>>& V) {
     // 最大距离，用于限制进队列的数据量，减少搜索空间
     // 在搜索结果小于k时默认为最大值，否则为当前搜索的k个点的距离的最大值
     T max_dist = std::numeric_limits<T>::max();
-
-    // topk的dist和idx
-    std::set<std::pair<T, size_t>> topk;
 
     // 遍历过的点
     std::unordered_set<size_t> visit;
 
     // 小根堆保存dist和idx
-    using PI = std::pair<T, size_t>;
     std::priority_queue<PI, std::deque<PI>, std::greater<PI>> query;
     // std::priority_queue<> query;
     query.push(std::make_pair(option.calc(vec_ptr[s], q, option.dim), s));
@@ -99,6 +101,9 @@ class VamanaIndex : boost::noncopyable {
       topk.insert(front);
       // 标记遍历过了
       visit.insert(front.second);
+      // 直接返回访问过的点和距离，后续可以直接使用，不用重复计算
+      V.insert(front);
+
       auto& childred = _graph[front.second];
       for (auto child : childred) {
         T cur_dist = option.calc(q, vec_ptr[child], option.dim);
@@ -120,16 +125,14 @@ class VamanaIndex : boost::noncopyable {
         }
       }
     }
-    knn.reserve(topk.size());
-    for (auto& kv : topk) {
-      knn.emplace_back(kv.second);
-    }
-    V.reserve(visit.size());
-    for (auto& idx : visit) V.emplace_back(idx);
+
     std::cout << fmt::format("visit node size: {}\n", visit.size());
     // 返回最近点的idx
     return topk.begin()->second;
   }
+
+  void robustPrune(size_t idx, std::set<std::pair<T, size_t>>& V, float e,
+                   size_t R) {}
 
   void build() {
     std::vector<size_t> index_data(option.N);
@@ -137,9 +140,9 @@ class VamanaIndex : boost::noncopyable {
     // 随机打散所有点，用于随机遍历所有点，构建索引
     std::random_shuffle(index_data.begin(), index_data.end());
     size_t ep_idx = calcCentroid();
-    std::vector<size_t> topk;
-    std::vector<size_t> visit;
-    auto ridx = bfs_search(ep_idx, vec_ptr[0], 1, option.L, topk, visit);
+    std::set<std::pair<T, size_t>> topk;
+    std::set<std::pair<T, size_t>> visit;
+    auto ridx = bfsSearch(ep_idx, vec_ptr[0], 1, option.L, topk, visit);
     std::cout << fmt::format(
         "search res: {}, except idx: {}, dist of q and res: {}\n", ridx, 0,
         option.calc(vec_ptr[0], vec_ptr[ridx], option.dim));
