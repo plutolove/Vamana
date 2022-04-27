@@ -12,6 +12,7 @@
 #include <unordered_set>
 
 #include "boost/noncopyable.hpp"
+#include "fmt/format.h"
 #include "index_option.h"
 
 namespace vamana {
@@ -35,8 +36,13 @@ class VamanaIndex : boost::noncopyable {
     for (auto& child : _graph) {
       child.reserve(option.R);
       size_t cnt = option.R;
+      std::unordered_set<size_t> gen_child;
       while (cnt--) {
-        child.emplace_back(dist(generator));
+        // 随机图中的child节点不重复
+        size_t idx = dist(generator);
+        if (gen_child.count(idx)) continue;
+        gen_child.insert(idx);
+        child.emplace_back(idx);
       }
     }
     std::cout << fmt::format("generate random graph finished, R: {}\n",
@@ -68,7 +74,6 @@ class VamanaIndex : boost::noncopyable {
   }
   // 起点，查询点，top k， search list size， topk res，vis list
   size_t bfs_search(size_t s, const T* q, size_t k, size_t L) {
-    std::cout << "bfs_search -------" << std::endl;
     // 最大距离，用于限制进队列的数据量，减少搜索空间
     // 在搜索结果小于k时默认为最大值，否则为当前搜索的k个点的距离的最大值
     T max_dist = std::numeric_limits<T>::max();
@@ -87,7 +92,6 @@ class VamanaIndex : boost::noncopyable {
     // bfs搜索
     while (not query.empty()) {
       auto front = query.top();
-      std::cout << fmt::format("------ visit idx: {}\n", front.second);
       query.pop();
       auto& childred = _graph[front.second];
       for (auto child : childred) {
@@ -106,7 +110,6 @@ class VamanaIndex : boost::noncopyable {
       // 如果topk的size大于L，则删除多余的距离大的点
       if (topk.size() > L) {
         max_dist = std::min(topk.rbegin()->first, max_dist);
-        std::cout << fmt::format("topk size: {}, L: {}\n", topk.size(), L);
         size_t del_cnt = topk.size() - L;
         for (auto iter = topk.rbegin(); iter != topk.rend(); iter++) {
           del_cnt--;
