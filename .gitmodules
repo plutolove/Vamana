@@ -1,6 +1,3 @@
 [submodule "third_deps/fmt"]
 	path = third_deps/fmt
 	url = https://github.com/fmtlib/fmt.git
-[submodule "third_deps/boost"]
-	path = third_deps/boost
-	url = https://github.com/boostorg/boost.git
