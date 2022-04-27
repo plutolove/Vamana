@@ -10,10 +10,10 @@ using namespace vamana;
 int main() {
   DistanceL2Float dis;
   IndexOption<DistanceL2Float> option;
-  option.N = 10000;
-  option.dim = 100;
+  option.N = 25000;
+  option.dim = 128;
   option.calc = dis;
-  option.file_name = "data.bin";
+  option.file_name = "../data/data.bin";
   option.L = 20;
   option.R = 20;
   VamanaIndex<float, DistanceL2Float> index(option);
