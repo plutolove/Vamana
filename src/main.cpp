@@ -15,7 +15,7 @@ int main() {
   option.calc = dis;
   option.file_name = "../data/data.bin";
   option.L = 20;
-  option.R = 20;
+  option.R = 15;
   VamanaIndex<float, DistanceL2Float> index(option);
   index.build();
   return 0;

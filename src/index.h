@@ -10,6 +10,7 @@
 #include <random>
 #include <set>
 #include <unordered_set>
+#include <vector>
 
 #include "boost/noncopyable.hpp"
 #include "fmt/format.h"
@@ -73,7 +74,8 @@ class VamanaIndex : boost::noncopyable {
     return idx;
   }
   // 起点，查询点，top k， search list size， topk res，vis list
-  size_t bfs_search(size_t s, const T* q, size_t k, size_t L) {
+  size_t bfs_search(size_t s, const T* q, size_t k, size_t L,
+                    std::vector<size_t>& knn, std::vector<size_t>& V) {
     // 最大距离，用于限制进队列的数据量，减少搜索空间
     // 在搜索结果小于k时默认为最大值，否则为当前搜索的k个点的距离的最大值
     T max_dist = std::numeric_limits<T>::max();
@@ -82,7 +84,7 @@ class VamanaIndex : boost::noncopyable {
     std::set<std::pair<T, size_t>> topk;
 
     // 遍历过的点
-    std::unordered_set<size_t> visit{s};
+    std::unordered_set<size_t> visit;
 
     // 小根堆保存dist和idx
     using PI = std::pair<T, size_t>;
@@ -93,6 +95,10 @@ class VamanaIndex : boost::noncopyable {
     while (not query.empty()) {
       auto front = query.top();
       query.pop();
+      // 保存到topk结果中
+      topk.insert(front);
+      // 标记遍历过了
+      visit.insert(front.second);
       auto& childred = _graph[front.second];
       for (auto child : childred) {
         T cur_dist = option.calc(q, vec_ptr[child], option.dim);
@@ -101,10 +107,6 @@ class VamanaIndex : boost::noncopyable {
           PI kv = std::make_pair(cur_dist, child);
           // 入队列
           query.push(kv);
-          // 标记遍历过了
-          visit.insert(child);
-          // 保存到topk结果中
-          topk.insert(kv);
         }
       }
       // 如果topk的size大于L，则删除多余的距离大的点
@@ -118,7 +120,14 @@ class VamanaIndex : boost::noncopyable {
         }
       }
     }
+    knn.reserve(topk.size());
+    for (auto& kv : topk) {
+      knn.emplace_back(kv.second);
+    }
+    V.reserve(visit.size());
+    for (auto& idx : visit) V.emplace_back(idx);
     std::cout << fmt::format("visit node size: {}\n", visit.size());
+    // 返回最近点的idx
     return topk.begin()->second;
   }
 
@@ -128,7 +137,9 @@ class VamanaIndex : boost::noncopyable {
     // 随机打散所有点，用于随机遍历所有点，构建索引
     std::random_shuffle(index_data.begin(), index_data.end());
     size_t ep_idx = calcCentroid();
-    auto ridx = bfs_search(ep_idx, vec_ptr[0], 1, 20);
+    std::vector<size_t> topk;
+    std::vector<size_t> visit;
+    auto ridx = bfs_search(ep_idx, vec_ptr[0], 1, option.L, topk, visit);
     std::cout << fmt::format(
         "search res: {}, except idx: {}, dist of q and res: {}\n", ridx, 0,
         option.calc(vec_ptr[0], vec_ptr[ridx], option.dim));
