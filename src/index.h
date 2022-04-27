@@ -10,6 +10,7 @@
 #include <random>
 #include <set>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "boost/noncopyable.hpp"
@@ -126,13 +127,58 @@ class VamanaIndex : boost::noncopyable {
       }
     }
 
-    std::cout << fmt::format("visit node size: {}\n", visit.size());
+    // std::cout << fmt::format("visit node size: {}\n", visit.size());
     // 返回最近点的idx
     return topk.begin()->second;
   }
 
-  void robustPrune(size_t idx, std::set<std::pair<T, size_t>>& V, float e,
-                   size_t R) {}
+  size_t robustPrune(size_t idx, std::set<std::pair<T, size_t>>& V, float e,
+                     size_t R) {
+    // 构建候选点，删除自己
+    std::set<std::pair<T, size_t>> candidate;
+    for (auto& kv : V) {
+      if (kv.second == idx) continue;
+      candidate.insert(kv);
+    }
+
+    std::vector<size_t> Nout;
+    while (not candidate.empty()) {
+      auto val = *candidate.begin();
+      Nout.emplace_back(val.second);
+      if (Nout.size() == option.R) break;
+
+      std::set<std::pair<T, size_t>> new_candi;
+      for (auto& kv : candidate) {
+        auto dist = e * option.calc(vec_ptr[val.second], vec_ptr[kv.second],
+                                    option.dim);
+        if (dist <= kv.first) {
+          continue;
+        }
+        new_candi.insert(kv);
+      }
+      std::swap(candidate, new_candi);
+    }
+    std::swap(_graph[idx], Nout);
+    return _graph[idx].size();
+  }
+
+  size_t robustPruneAll(size_t node_idx, float e) {
+    for (auto& idx : _graph[node_idx]) {
+      if (_graph[idx].size() < option.R) {
+        _graph.emplace_back(node_idx);
+      } else {
+        std::set<std::pair<T, size_t>> V{
+            {option.calc(vec_ptr[idx], vec_ptr[node_idx], option.dim),
+             node_idx}};
+        for (auto& j : _graph[idx]) {
+          V.insert(std::make_pair(
+              option.calc(vec_ptr[idx], vec_ptr[j], option.dim), j));
+        }
+        robustPrune(idx, V, e, option.R);
+      }
+    }
+    return 0;
+  }
 
   void build() {
     std::vector<size_t> index_data(option.N);
@@ -140,12 +186,19 @@ class VamanaIndex : boost::noncopyable {
     // 随机打散所有点，用于随机遍历所有点，构建索引
     std::random_shuffle(index_data.begin(), index_data.end());
     size_t ep_idx = calcCentroid();
-    std::set<std::pair<T, size_t>> topk;
-    std::set<std::pair<T, size_t>> visit;
-    auto ridx = bfsSearch(ep_idx, vec_ptr[0], 1, option.L, topk, visit);
-    std::cout << fmt::format(
-        "search res: {}, except idx: {}, dist of q and res: {}\n", ridx, 0,
-        option.calc(vec_ptr[0], vec_ptr[ridx], option.dim));
+    size_t cnt = 0;
+    for (auto& idx : index_data) {
+      std::set<std::pair<T, size_t>> topk;
+      std::set<std::pair<T, size_t>> visit;
+      auto ridx = bfsSearch(ep_idx, vec_ptr[idx], 1, option.L, topk, visit);
+      std::cout << fmt::format(
+          "search res: {}, except idx: {}, dist of q and res: {}\n", ridx, idx,
+          option.calc(vec_ptr[idx], vec_ptr[ridx], option.dim));
+      robustPrune(idx, visit, 1, option.R);
+      robustPruneAll(idx, 1);
+      // 随机测试5
+      if (cnt++ > 10) break;
+    }
   }
 
   ~VamanaIndex() {
