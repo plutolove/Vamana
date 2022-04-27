@@ -199,6 +199,20 @@ class VamanaIndex : boost::noncopyable {
       // 随机测试5
       if (cnt++ > 10) break;
     }
+    std::cout << "-----------" << std::endl;
+    cnt = 0;
+    for (auto& idx : index_data) {
+      std::set<std::pair<T, size_t>> topk;
+      std::set<std::pair<T, size_t>> visit;
+      auto ridx = bfsSearch(ep_idx, vec_ptr[idx], 1, option.L, topk, visit);
+      std::cout << fmt::format(
+          "search res: {}, except idx: {}, dist of q and res: {}\n", ridx, idx,
+          option.calc(vec_ptr[idx], vec_ptr[ridx], option.dim));
+      robustPrune(idx, visit, 1.2, option.R);
+      robustPruneAll(idx, 1.2);
+      // 随机测试5
+      if (cnt++ > 10) break;
+    }
   }
 
   ~VamanaIndex() {
