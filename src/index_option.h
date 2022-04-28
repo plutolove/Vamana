@@ -14,7 +14,10 @@ struct IndexOption {
   size_t dim;
   // data size
   size_t N;
-  //Centroid
+  // test data size
+  size_t test_N;
+  std::string test_file;
+  // Centroid
   size_t centroid_idx;
   float alpha = 1.2;
   std::string file_name;

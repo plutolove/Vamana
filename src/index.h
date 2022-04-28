@@ -218,13 +218,13 @@ class VamanaIndex {
     std::cout << "start read index" << std::endl;
     std::ifstream fin(option.save_path, std::ios::binary);
     size_t N;
+    size_t ves[500];
     fin.read(reinterpret_cast<char*>(&N), sizeof(N));
     std::cout << "read N: " << N << std::endl;
     assert(N == option.N);
     for (size_t i = 0; i < option.N; ++i) {
       size_t size;
       size_t from;
-      size_t ves[500];
       // 起点
       fin.read(reinterpret_cast<char*>(&from), sizeof(size_t));
       // 链接的size
@@ -266,9 +266,45 @@ class VamanaIndex {
     return option.N;
   }
 
+  size_t forceSearch(const T* ptr) {
+    T dist = option.calc(ptr, vec_ptr[0], option.dim);
+    size_t ret = 0;
+    for (size_t i = 0; i < option.N; i++) {
+      auto d = option.calc(ptr, vec_ptr[i], option.dim);
+      if (d < dist) {
+        dist = d;
+        ret = i;
+      }
+    }
+    return ret;
+  }
+
+  size_t test() {
+    loadTest();
+    size_t same = 0;
+    size_t diff = 0;
+    for (size_t i = 0; i < option.test_N; i++) {
+      std::set<std::pair<T, size_t>> topk;
+      std::set<std::pair<T, size_t>> visit;
+      auto ridx = bfsSearch(option.centroid_idx, _test_ptr[i], 1, option.L,
+                            topk, visit);
+      auto fidx = forceSearch(_test_ptr[i]);
+      if (fidx == ridx)
+        same++;
+      else
+        diff++;
+      // std::cout << fmt::format("search res: {}, except idx: {}\n", ridx,
+      // fidx);
+    }
+    std::cout << fmt::format("test same: {}, diff: {}, same rate: {}\n", same,
+                             diff, same * 1.0 / (same + diff));
+    return 0;
+  }
+
   ~VamanaIndex() {
     // 释放内存
-    delete[] _data;
+    if (_data) delete[] _data;
+    if (_test) delete[] _test;
   }
 
  protected:
@@ -293,9 +329,32 @@ class VamanaIndex {
     in.close();
   }
 
+  void loadTest() {
+    std::cout << fmt::format("start load data from: {}\n", option.test_file);
+    std::ifstream in(option.test_file, std::ios_base::binary);
+    size_t dim;
+    size_t N;
+    in.read(reinterpret_cast<char*>(&N), sizeof(size_t));
+    in.read(reinterpret_cast<char*>(&dim), sizeof(dim));
+    assert(option.test_N == N);
+    assert(option.dim == dim);
+    _test_ptr.reserve(N);
+    _test = new T[N * dim];
+    T* ptr = _test;
+    for (size_t i = 0; i < N; ++i) {
+      in.read(reinterpret_cast<char*>(ptr), dim * sizeof(T));
+      _test_ptr.push_back(ptr);
+      ptr += dim;
+    }
+    std::cout << fmt::format("read data finished, size: {}, dim: {}\n", N, dim);
+    in.close();
+  }
+
  protected:
   // 所有vec保存到同一个_data数组中
-  T* _data;
+  T* _data = nullptr;
+  T* _test = nullptr;
+  std::vector<const T*> _test_ptr;
   // 保存每个vec的起始ptr
   std::vector<const T*> vec_ptr;
   std::vector<std::unordered_set<size_t>> _graph;
