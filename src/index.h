@@ -13,7 +13,6 @@
 #include <utility>
 #include <vector>
 
-#include "boost/noncopyable.hpp"
 #include "fmt/format.h"
 #include "index_option.h"
 
@@ -24,7 +23,7 @@ struct Entry {
 };
 
 template <typename T, typename DistCalc>
-class VamanaIndex : boost::noncopyable {
+class VamanaIndex {
   // <dist, idx>
   using PI = std::pair<T, size_t>;
 
