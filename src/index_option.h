@@ -14,8 +14,11 @@ struct IndexOption {
   size_t dim;
   // data size
   size_t N;
+  //Centroid
+  size_t centroid_idx;
   float alpha = 1.2;
   std::string file_name;
+  std::string save_path;
   DistCalc calc;
 };
 

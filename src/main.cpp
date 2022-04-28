@@ -14,9 +14,13 @@ int main() {
   option.dim = 128;
   option.calc = dis;
   option.file_name = "../data/data.bin";
-  option.L = 25;
-  option.R = 20;
+  option.L = 15;
+  option.R = 10;
+  option.save_path = "../data/index.bin";
   VamanaIndex<float, DistanceL2Float> index(option);
   index.build();
+  index.save_index();
+  index.calcCentroid();
+  index.read_index();
   return 0;
 }
