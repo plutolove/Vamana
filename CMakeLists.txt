@@ -25,4 +25,4 @@ target_compile_options(Vamana PRIVATE -mavx2 -mavx -msse -msse2 -fPIC -fopenmp -
 
 add_executable(gen_data ${CMAKE_SOURCE_DIR}/tools/gen_data.cpp)
 add_executable(read_data ${CMAKE_SOURCE_DIR}/tools/read_data.cpp)
-add_executable(fvec ${CMAKE_SOURCE_DIR}/tools/fvec.cpp)
+add_executable(split_data ${CMAKE_SOURCE_DIR}/tools/split_data.cpp)

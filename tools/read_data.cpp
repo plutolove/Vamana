@@ -6,12 +6,13 @@
 using namespace std;
 
 int main() {
-  ifstream in("data.bin", std::ios_base::binary);
+  ifstream in("../data/test.bin", std::ios_base::binary);
   size_t dim;
   size_t N;
   in.read(reinterpret_cast<char*>(&N), sizeof(size_t));
   in.read(reinterpret_cast<char*>(&dim), sizeof(dim));
-  size_t top = 100;
+  std::cout << "N: " << N << " dim: " << dim << std::endl;
+  size_t top = 5;
   top = std::min(N, top);
   float vec[100];
   while (top--) {

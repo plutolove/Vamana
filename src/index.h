@@ -73,7 +73,7 @@ class VamanaIndex {
 
   void build();
 
-  size_t read_index() {
+  size_t load_index() {
     std::cout << "start read index" << std::endl;
     std::ifstream fin(option.save_path, std::ios::binary);
     size_t N;
@@ -157,7 +157,7 @@ class VamanaIndex {
     loadTest();
     size_t same = 0;
     size_t diff = 0;
-    for (size_t i = 0; i < option.test_N; i++) {
+    for (size_t i = 0; i < 100; i++) {
       std::vector<std::pair<T, size_t>> topk;
       std::vector<std::pair<T, size_t>> visit;
       auto ridx = bfsSearch(option.centroid_idx, _test_ptr[i], 1, option.L,
