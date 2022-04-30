@@ -4,6 +4,15 @@ project(Vamana)
 
 set(CMAKE_CXX_STANDARD 17)
 
+#OpenMP
+find_package(OpenMP)
+if (OPENMP_FOUND)
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+else()
+    message(FATAL_ERROR "No OpenMP support")
+endif()
+
 include_directories(${CMAKE_SOURCE_DIR}/src/)
 add_subdirectory(${CMAKE_SOURCE_DIR}/third_deps/fmt)
 include_directories(${CMAKE_SOURCE_DIR}/third_deps/fmt/include)
@@ -12,7 +21,7 @@ file(GLOB_RECURSE SRC ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/*/*.
 
 add_executable(Vamana ${SRC})
 target_link_libraries(Vamana fmt-header-only)
-target_compile_options(Vamana PRIVATE -mavx2 -mavx -msse -msse2 -fPIC)
+target_compile_options(Vamana PRIVATE -mavx2 -mavx -msse -msse2 -fPIC -fopenmp -fopenmp-simd)
 
 add_executable(gen_data ${CMAKE_SOURCE_DIR}/tools/gen_data.cpp)
 add_executable(read_data ${CMAKE_SOURCE_DIR}/tools/read_data.cpp)

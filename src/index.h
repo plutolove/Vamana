@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <mutex>
 #include <queue>
 #include <random>
 #include <set>
@@ -16,11 +17,15 @@
 #include "fmt/format.h"
 #include "index_option.h"
 
+#define ROUND_UP(X, Y) \
+  ((((uint64_t)(X) / (Y)) + ((uint64_t)(X) % (Y) != 0)) * (Y))
+
+#define DIV_ROUND_UP(X, Y) (((uint64_t)(X) / (Y)) + ((uint64_t)(X) % (Y) != 0))
+
+// round down X to the nearest multiple of Y
+#define ROUND_DOWN(X, Y) (((uint64_t)(X) / (Y)) * (Y))
+
 namespace vamana {
-template <typename T>
-struct Entry {
-  T* ptr;
-};
 
 template <typename T, typename DistCalc>
 class VamanaIndex {
@@ -31,6 +36,7 @@ class VamanaIndex {
   VamanaIndex(const IndexOption<DistCalc>& option) : option(option) {
     loadData();
     _graph.resize(option.N);
+    _locks = std::vector<std::mutex>(option.N);
   }
 
   void init_random_graph() {
@@ -54,83 +60,12 @@ class VamanaIndex {
                              option.R);
   }
 
-  size_t calcCentroid() {
-    std::vector<T> ce(option.dim, 0);
-    // 初始化质心
-    for (size_t i = 0; i < option.N; ++i) {
-      for (size_t j = 0; j < option.dim; ++j) {
-        ce[j] += vec_ptr[i][j];
-      }
-    }
-    for (size_t i = 0; i < option.dim; ++i) ce[i] /= option.N;
-
-    auto* ce_ptr = ce.data();
-    T dist = option.calc(ce_ptr, vec_ptr[0], option.dim);
-    size_t idx = 0;
-    for (size_t i = 1; i < option.N; ++i) {
-      auto tmp_dist = option.calc(ce_ptr, vec_ptr[i], option.dim);
-      if (tmp_dist < dist) {
-        dist = tmp_dist;
-        idx = i;
-      }
-    }
-    std::cout << fmt::format("calcCentroid idx: {}, dist: {}\n", idx, dist);
-    option.centroid_idx = idx;
-    return idx;
-  }
+  size_t calcCentroid();
 
   // 起点，查询点，top k， search list size， topk res，vis list
   size_t bfsSearch(size_t s, const T* q, size_t k, size_t L,
-                   std::set<std::pair<T, size_t>>& topk,
-                   std::set<std::pair<T, size_t>>& V) {
-    // 最大距离，用于限制进队列的数据量，减少搜索空间
-    // 在搜索结果小于k时默认为最大值，否则为当前搜索的k个点的距离的最大值
-    T max_dist = std::numeric_limits<T>::max();
-
-    // 遍历过的点
-    std::unordered_set<size_t> visit;
-
-    // 小根堆保存dist和idx
-    std::priority_queue<PI, std::deque<PI>, std::greater<PI>> query;
-    // std::priority_queue<> query;
-    query.push(std::make_pair(option.calc(vec_ptr[s], q, option.dim), s));
-    // bfs搜索
-    while (not query.empty()) {
-      auto front = query.top();
-      query.pop();
-      // 保存到topk结果中
-      topk.insert(front);
-      // 标记遍历过了
-      visit.insert(front.second);
-      // 直接返回访问过的点和距离，后续可以直接使用，不用重复计算
-      V.insert(front);
-
-      auto& childred = _graph[front.second];
-      for (auto child : childred) {
-        T cur_dist = option.calc(q, vec_ptr[child], option.dim);
-        // 之前没有访问的点，同时距离小于最大距离
-        if (0 == visit.count(child) && cur_dist <= max_dist) {
-          PI kv = std::make_pair(cur_dist, child);
-          // 入队列
-          query.push(kv);
-        }
-      }
-      // 如果topk的size大于L，则删除多余的距离大的点
-      if (topk.size() > L) {
-        max_dist = std::min(topk.rbegin()->first, max_dist);
-        size_t del_cnt = topk.size() - L;
-        for (auto iter = topk.rbegin(); iter != topk.rend(); iter++) {
-          del_cnt--;
-          topk.erase(*iter);
-          if (0 == del_cnt) break;
-        }
-      }
-    }
-
-    // std::cout << fmt::format("visit node size: {}\n", visit.size());
-    // 返回最近点的idx
-    return topk.begin()->second;
-  }
+                   std::set<std::pair<T, size_t>>& topL,
+                   std::set<std::pair<T, size_t>>& V);
 
   size_t robustPrune(size_t idx, std::set<std::pair<T, size_t>>& V, float e,
                      size_t R) {
@@ -182,37 +117,7 @@ class VamanaIndex {
     return 0;
   }
 
-  void build() {
-    init_random_graph();
-    std::vector<size_t> index_data(option.N);
-    std::iota(index_data.begin(), index_data.end(), 0);
-    // 随机打散所有点，用于随机遍历所有点，构建索引
-    std::random_shuffle(index_data.begin(), index_data.end());
-    size_t ep_idx = calcCentroid();
-    size_t cnt = 0;
-    for (auto& idx : index_data) {
-      std::set<std::pair<T, size_t>> topk;
-      std::set<std::pair<T, size_t>> visit;
-      auto ridx = bfsSearch(ep_idx, vec_ptr[idx], 1, option.L, topk, visit);
-      // std::cout << fmt::format(
-      //     "search res: {}, except idx: {}, dist of q and res: {}\n", ridx,
-      //     idx, option.calc(vec_ptr[idx], vec_ptr[ridx], option.dim));
-      robustPrune(idx, visit, 1, option.R);
-      robustPruneAll(idx, 1);
-      // 随机测试5
-    }
-    std::cout << "-----------" << std::endl;
-    for (auto& idx : index_data) {
-      std::set<std::pair<T, size_t>> topk;
-      std::set<std::pair<T, size_t>> visit;
-      auto ridx = bfsSearch(ep_idx, vec_ptr[idx], 1, option.L, topk, visit);
-      // std::cout << fmt::format(
-      //     "search res: {}, except idx: {}, dist of q and res: {}\n", ridx,
-      //     idx, option.calc(vec_ptr[idx], vec_ptr[ridx], option.dim));
-      robustPrune(idx, visit, 1.2, option.R);
-      robustPruneAll(idx, 1.2);
-    }
-  }
+  void build();
 
   size_t read_index() {
     std::cout << "start read index" << std::endl;
@@ -360,6 +265,7 @@ class VamanaIndex {
   // 保存每个vec的起始ptr
   std::vector<const T*> vec_ptr;
   std::vector<std::unordered_set<size_t>> _graph;
+  std::vector<std::mutex> _locks;
   IndexOption<DistCalc> option;
 };
 
