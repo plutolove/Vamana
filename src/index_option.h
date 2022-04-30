@@ -14,6 +14,8 @@ struct IndexOption {
   size_t dim;
   // data size
   size_t N;
+  // max candiate
+  size_t C = 750;
   // test data size
   size_t test_N;
   std::string test_file;

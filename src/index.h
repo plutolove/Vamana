@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -48,12 +49,15 @@ class VamanaIndex {
     std::uniform_int_distribution<int> dist(0, option.N - 1);
     for (size_t i = 0; i < _graph.size(); i++) {
       auto& child = _graph[i];
+      child.reserve(std::ceil(option.R * 1.3 * 1.05));
       std::unordered_set<size_t> gen_child;
-      while (child.size() < option.R) {
+      while (gen_child.size() < option.R) {
         // 随机图中的child节点不重复，同时节点编号不是自己
         size_t idx = dist(generator);
         if (idx == i) continue;
-        child.insert(idx);
+        if (gen_child.count(idx)) continue;
+        gen_child.insert(idx);
+        child.push_back(idx);
       }
     }
     std::cout << fmt::format("generate random graph finished, R: {}\n",
@@ -64,58 +68,8 @@ class VamanaIndex {
 
   // 起点，查询点，top k， search list size， topk res，vis list
   size_t bfsSearch(size_t s, const T* q, size_t k, size_t L,
-                   std::set<std::pair<T, size_t>>& topL,
-                   std::set<std::pair<T, size_t>>& V);
-
-  size_t robustPrune(size_t idx, std::set<std::pair<T, size_t>>& V, float e,
-                     size_t R) {
-    // 构建候选点，删除自己
-    std::set<std::pair<T, size_t>> candidate;
-    for (auto& kv : V) {
-      if (kv.second == idx) continue;
-      candidate.insert(kv);
-    }
-
-    std::unordered_set<size_t> Nout;
-    while (not candidate.empty()) {
-      auto val = *candidate.begin();
-      Nout.insert(val.second);
-      if (Nout.size() == option.R) break;
-
-      std::set<std::pair<T, size_t>> new_candi;
-      for (auto& kv : candidate) {
-        auto dist = e * option.calc(vec_ptr[val.second], vec_ptr[kv.second],
-                                    option.dim);
-        if (dist <= option.calc(vec_ptr[idx], vec_ptr[kv.second], option.dim)) {
-          continue;
-        }
-        new_candi.insert(kv);
-      }
-      std::swap(candidate, new_candi);
-    }
-    std::swap(_graph[idx], Nout);
-    return _graph[idx].size();
-  }
-
-  size_t robustPruneAll(size_t from, float e) {
-    auto& children = _graph[from];
-    // from -> to -> ed;
-    for (auto& idx : children) {
-      auto& ed = _graph[idx];
-      if (ed.size() < option.R) {
-        ed.insert(from);
-      } else {
-        std::set<std::pair<T, size_t>> V{
-            {option.calc(vec_ptr[idx], vec_ptr[from], option.dim), from}};
-        for (auto& j : ed) {
-          V.insert(std::make_pair(
-              option.calc(vec_ptr[idx], vec_ptr[j], option.dim), j));
-        }
-        robustPrune(idx, V, e, option.R);
-      }
-    }
-    return 0;
-  }
+                   std::vector<std::pair<T, size_t>>& visited_nodes,
+                   std::vector<std::pair<T, size_t>>& visited_idx);
 
   void build();
 
@@ -136,14 +90,29 @@ class VamanaIndex {
       fin.read(reinterpret_cast<char*>(&size), sizeof(size_t));
       fin.read(reinterpret_cast<char*>(ves), sizeof(size_t) * size);
       _graph[from].clear();
+      _graph[from].reserve(option.R);
       // 所有相连的点
       for (size_t j = 0; j < size; j++) {
-        _graph[from].insert(ves[j]);
+        _graph[from].push_back(ves[j]);
       }
     }
     fin.close();
     return option.N;
   }
+
+  void occlude_list(std::vector<PI>& pool, float alpha, size_t degree,
+                    size_t maxc, std::vector<PI>& result);
+
+  void occlude_list(std::vector<PI>& pool, float alpha, size_t degree,
+                    size_t maxc, std::vector<PI>& result,
+                    std::vector<float>& occlude_factor);
+
+  void prune_neighbors(size_t node_idx, size_t R, size_t C, float alpha,
+                       std::vector<PI>& node_list,
+                       std::vector<size_t>& pruned_list);
+
+  void batch_update(size_t node_idx, const std::vector<size_t>& pruned_list,
+                    size_t R, std::vector<bool>& need_to_sync);
 
   size_t save_index() {
     std::cout << "start save index" << std::endl;
@@ -189,8 +158,8 @@ class VamanaIndex {
     size_t same = 0;
     size_t diff = 0;
     for (size_t i = 0; i < option.test_N; i++) {
-      std::set<std::pair<T, size_t>> topk;
-      std::set<std::pair<T, size_t>> visit;
+      std::vector<std::pair<T, size_t>> topk;
+      std::vector<std::pair<T, size_t>> visit;
       auto ridx = bfsSearch(option.centroid_idx, _test_ptr[i], 1, option.L,
                             topk, visit);
       auto fidx = forceSearch(_test_ptr[i]);
@@ -264,7 +233,7 @@ class VamanaIndex {
   std::vector<const T*> _test_ptr;
   // 保存每个vec的起始ptr
   std::vector<const T*> vec_ptr;
-  std::vector<std::unordered_set<size_t>> _graph;
+  std::vector<std::vector<size_t>> _graph;
   std::vector<std::mutex> _locks;
   IndexOption<DistCalc> option;
 };

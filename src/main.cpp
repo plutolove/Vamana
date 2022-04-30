@@ -14,7 +14,7 @@ int main() {
   option.dim = 100;
   option.calc = dis;
   option.file_name = "../data/data.bin";
-  option.L = 16;
+  option.L = 15;
   option.R = 15;
   option.save_path = "../data/index.bin";
   option.test_file = "../data/query.bin";
