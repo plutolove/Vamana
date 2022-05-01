@@ -155,9 +155,14 @@ class VamanaIndex {
 
   size_t test() {
     loadTest();
+    std::vector<size_t> index_data(option.test_N);
+    std::iota(index_data.begin(), index_data.end(), 0);
+    // 随机打散所有点，用于随机遍历所有点，构建索引
+    std::random_shuffle(index_data.begin(), index_data.end());
     size_t same = 0;
     size_t diff = 0;
-    for (size_t i = 0; i < 100; i++) {
+    for (size_t idx = 0; idx < 300; idx++) {
+      size_t i = index_data[idx];
       std::vector<std::pair<T, size_t>> topk;
       std::vector<std::pair<T, size_t>> visit;
       auto ridx = bfsSearch(option.centroid_idx, _test_ptr[i], 1, option.L,

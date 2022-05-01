@@ -104,7 +104,7 @@ size_t VamanaIndex<T, DistCalc>::bfsSearch(
 template <typename T, typename DistCalc>
 void VamanaIndex<T, DistCalc>::build() {
   // 分NUM_SYNCS次batch执行
-  size_t NUM_SYNCS = DIV_ROUND_UP(option.N, (64 * 64));
+  size_t NUM_SYNCS = DIV_ROUND_UP(option.N, (64));
   size_t round_size = DIV_ROUND_UP(option.N, NUM_SYNCS);  // size of each batch
 
   init_random_graph();
@@ -131,6 +131,7 @@ void VamanaIndex<T, DistCalc>::build() {
     } else {
       option.alpha = alpha;
     }
+    std::cout << "alpha: " << option.alpha << std::endl;
     // 标记需要异步更新图的点
     std::vector<bool> need_to_sync(option.N, false);
     // 要调整图的节点，分round_size，可以并行计算
