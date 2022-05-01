@@ -15,15 +15,15 @@ int main() {
   option.calc = dis;
   option.file_name = "../data/data.bin";
   option.L = 35;
-  option.R = 30;
+  option.R = 25;
   option.save_path = "../data/index.bin";
   option.test_file = "../data/test.bin";
   option.test_N = 20000;
   VamanaIndex<float, DistanceL2Float> index(option);
   index.build();
-  // index.save_index();
+  index.save_index();
   index.calcCentroid();
-  // index.load_index();
+  index.load_index();
   index.test();
   return 0;
 }

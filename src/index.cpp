@@ -1,3 +1,5 @@
+#include <time.h>
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdio>
@@ -104,7 +106,7 @@ size_t VamanaIndex<T, DistCalc>::bfsSearch(
 template <typename T, typename DistCalc>
 void VamanaIndex<T, DistCalc>::build() {
   // 分NUM_SYNCS次batch执行
-  size_t NUM_SYNCS = DIV_ROUND_UP(option.N, (64));
+  size_t NUM_SYNCS = DIV_ROUND_UP(option.N, (64 * 64));
   size_t round_size = DIV_ROUND_UP(option.N, NUM_SYNCS);  // size of each batch
 
   init_random_graph();
@@ -114,15 +116,8 @@ void VamanaIndex<T, DistCalc>::build() {
   std::random_shuffle(index_data.begin(), index_data.end());
 
   size_t ep_idx = calcCentroid();
-  size_t cnt = 0;
-  size_t same = 0;
-  size_t diff = 0;
-  std::cout << "before: ";
-  for (auto id : _graph[0]) {
-    std::cout << id << ", ";
-  }
-  std::cout << std::endl;
-
+  auto s = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> diff;
   size_t ITER_NUM = 2;
   float alpha = option.alpha;
   for (size_t iter_id = 0; iter_id < ITER_NUM; ++iter_id) {
@@ -233,11 +228,9 @@ void VamanaIndex<T, DistCalc>::build() {
       for (auto id : new_out) _graph[node_idx].emplace_back(id);
     }
   }
-  std::cout << "after: ";
-  for (auto id : _graph[0]) {
-    std::cout << id << ", ";
-  }
-  std::cout << std::endl;
+  diff = std::chrono::high_resolution_clock::now() - s;
+  std::cout << fmt::format("build index success, time cost: {}s\n",
+                           diff.count());
 }
 
 template <typename T, typename DistCalc>
