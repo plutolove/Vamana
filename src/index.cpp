@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "distance.h"
+#include "fmt/format.h"
 #include "index.h"
 #include "omp.h"
 
@@ -97,7 +98,7 @@ size_t VamanaIndex<T, DistCalc>::bfsSearch(
     visited_node.push_back(kv);
   }
 
-  return topL.rbegin()->second;
+  return topL.begin()->second;
 }
 
 template <typename T, typename DistCalc>
@@ -112,15 +113,15 @@ void VamanaIndex<T, DistCalc>::build() {
   // 随机打散所有点，用于随机遍历所有点，构建索引
   std::random_shuffle(index_data.begin(), index_data.end());
 
-  // 标记需要异步更新图的点
-  std::vector<bool> need_to_sync(option.N, false);
-  // 要调整图的节点，分round_size，可以并行计算
-  std::vector<std::vector<size_t>> pruned_list_vec(round_size);
-
   size_t ep_idx = calcCentroid();
   size_t cnt = 0;
   size_t same = 0;
   size_t diff = 0;
+  std::cout << "before: ";
+  for (auto id : _graph[0]) {
+    std::cout << id << ", ";
+  }
+  std::cout << std::endl;
 
   size_t ITER_NUM = 2;
   float alpha = option.alpha;
@@ -130,6 +131,11 @@ void VamanaIndex<T, DistCalc>::build() {
     } else {
       option.alpha = alpha;
     }
+    // 标记需要异步更新图的点
+    std::vector<bool> need_to_sync(option.N, false);
+    // 要调整图的节点，分round_size，可以并行计算
+    std::vector<std::vector<size_t>> pruned_list_vec(round_size);
+
     for (size_t sync_num = 0; sync_num < NUM_SYNCS; sync_num++) {
       size_t start_id = sync_num * round_size;
       size_t end_id = std::min(option.N, (sync_num + 1) * round_size);
@@ -183,9 +189,8 @@ void VamanaIndex<T, DistCalc>::build() {
         pruned_vec.clear();
       }
 #pragma omp parallel for schedule(dynamic, 65536)
-      for (size_t idx = start_id; idx < end_id; ++idx) {
+      for (size_t idx = 0; idx < index_data.size(); ++idx) {
         size_t node_idx = index_data[idx];
-        size_t node_offset = idx - start_id;
         if (need_to_sync[node_idx]) {
           need_to_sync[node_idx] = false;
           std::unordered_set<size_t> visit_idx;
@@ -205,30 +210,33 @@ void VamanaIndex<T, DistCalc>::build() {
           for (auto id : new_out) _graph[node_idx].emplace_back(id);
         }
       }
-#pragma omp parallel for schedule(dynamic, 65536)
-      for (size_t idx = start_id; idx < end_id; ++idx) {
-        size_t node_idx = index_data[idx];
-        size_t node_offset = idx - start_id;
-        if (_graph[node_idx].size() > option.R) {
-          std::unordered_set<size_t> visit_idx;
-          std::vector<PI> visit;
-          std::vector<size_t> new_out;
-          for (auto& v : _graph[node_idx]) {
-            if (visit_idx.find(v) == visit_idx.end() && v != node_idx) {
-              float dist =
-                  option.calc(vec_ptr[node_idx], vec_ptr[v], option.dim);
-              visit.emplace_back(std::make_pair(dist, v));
-              visit_idx.insert(v);
-            }
-          }
-          prune_neighbors(node_idx, option.R, option.C, option.alpha, visit,
-                          new_out);
-          _graph[node_idx].clear();
-          for (auto id : new_out) _graph[node_idx].emplace_back(id);
-        }
-      }
     }
   }
+#pragma omp parallel for schedule(dynamic, 65536)
+  for (size_t idx = 0; idx < index_data.size(); ++idx) {
+    size_t node_idx = index_data[idx];
+    if (_graph[node_idx].size() > option.R) {
+      std::unordered_set<size_t> visit_idx;
+      std::vector<PI> visit;
+      std::vector<size_t> new_out;
+      for (auto& v : _graph[node_idx]) {
+        if (visit_idx.find(v) == visit_idx.end() && v != node_idx) {
+          float dist = option.calc(vec_ptr[node_idx], vec_ptr[v], option.dim);
+          visit.emplace_back(std::make_pair(dist, v));
+          visit_idx.insert(v);
+        }
+      }
+      prune_neighbors(node_idx, option.R, option.C, option.alpha, visit,
+                      new_out);
+      _graph[node_idx].clear();
+      for (auto id : new_out) _graph[node_idx].emplace_back(id);
+    }
+  }
+  std::cout << "after: ";
+  for (auto id : _graph[0]) {
+    std::cout << id << ", ";
+  }
+  std::cout << std::endl;
 }
 
 template <typename T, typename DistCalc>
@@ -268,7 +276,7 @@ void VamanaIndex<T, DistCalc>::occlude_list(
   if (node_list.empty()) return;
   float cur_alpha = 1;
   while (cur_alpha <= alpha && result.size() < degree) {
-    unsigned start = 0;
+    size_t start = 0;
     while (result.size() < degree && (start) < node_list.size() &&
            start < maxc) {
       auto& p = node_list[start];
@@ -280,7 +288,7 @@ void VamanaIndex<T, DistCalc>::occlude_list(
       // 表示该点取过了
       occlude_factor[start] = std::numeric_limits<float>::max();
       result.push_back(p);
-      for (unsigned t = start + 1; t < node_list.size() && t < maxc; t++) {
+      for (size_t t = start + 1; t < node_list.size() && t < maxc; t++) {
         if (occlude_factor[t] > alpha) continue;
         float dist = option.calc(vec_ptr[node_list[start].second],
                                  vec_ptr[node_list[t].second], option.dim);

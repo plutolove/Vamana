@@ -20,10 +20,10 @@ int main() {
   option.test_file = "../data/test.bin";
   option.test_N = 20000;
   VamanaIndex<float, DistanceL2Float> index(option);
-  // index.build();
+  index.build();
   // index.save_index();
   index.calcCentroid();
-  index.load_index();
+  // index.load_index();
   index.test();
   return 0;
 }
