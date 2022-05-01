@@ -28,13 +28,13 @@
 
 namespace vamana {
 
-template <typename T, typename DistCalc>
+template <typename T>
 class VamanaIndex {
   // <dist, idx>
   using PI = std::pair<T, size_t>;
 
  public:
-  VamanaIndex(const IndexOption<DistCalc>& option) : option(option) {
+  VamanaIndex(const IndexOption<T>& option) : option(option) {
     loadData();
     _graph.resize(option.N);
     _locks = std::vector<std::mutex>(option.N);
@@ -240,7 +240,7 @@ class VamanaIndex {
   std::vector<const T*> vec_ptr;
   std::vector<std::vector<size_t>> _graph;
   std::vector<std::mutex> _locks;
-  IndexOption<DistCalc> option;
+  IndexOption<T> option;
 };
 
 }  // namespace vamana

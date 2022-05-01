@@ -2,9 +2,10 @@
 #include <cstdlib>
 #include <string>
 
+#include "distance.h"
 namespace vamana {
 
-template <typename DistCalc>
+template <typename T>
 struct IndexOption {
   // search list size
   size_t L;
@@ -24,7 +25,7 @@ struct IndexOption {
   float alpha = 1.2;
   std::string file_name;
   std::string save_path;
-  DistCalc calc;
+  DistanceL2<T> calc;
 };
 
 }  // namespace vamana

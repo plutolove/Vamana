@@ -14,8 +14,8 @@
 
 namespace vamana {
 
-template <typename T, typename DistCalc>
-size_t VamanaIndex<T, DistCalc>::calcCentroid() {
+template <typename T>
+size_t VamanaIndex<T>::calcCentroid() {
   std::vector<T> ce(option.dim, 0);
   // 初始化质心
   for (size_t i = 0; i < option.N; ++i) {
@@ -40,8 +40,8 @@ size_t VamanaIndex<T, DistCalc>::calcCentroid() {
   return idx;
 }
 
-template <typename T, typename DistCalc>
-size_t VamanaIndex<T, DistCalc>::bfsSearch(
+template <typename T>
+size_t VamanaIndex<T>::bfsSearch(
     size_t s, const T* q, size_t k, size_t L,
     std::vector<std::pair<T, size_t>>& top_nov,
     std::vector<std::pair<T, size_t>>& visited_node) {
@@ -103,8 +103,8 @@ size_t VamanaIndex<T, DistCalc>::bfsSearch(
   return topL.begin()->second;
 }
 
-template <typename T, typename DistCalc>
-void VamanaIndex<T, DistCalc>::build() {
+template <typename T>
+void VamanaIndex<T>::build() {
   // 分NUM_SYNCS次batch执行
   size_t NUM_SYNCS = DIV_ROUND_UP(option.N, (64 * 64));
   size_t round_size = DIV_ROUND_UP(option.N, NUM_SYNCS);  // size of each batch
@@ -233,10 +233,10 @@ void VamanaIndex<T, DistCalc>::build() {
                            diff.count());
 }
 
-template <typename T, typename DistCalc>
-void VamanaIndex<T, DistCalc>::batch_update(
-    size_t node_idx, const std::vector<size_t>& pruned_list, size_t R,
-    std::vector<bool>& need_to_sync) {
+template <typename T>
+void VamanaIndex<T>::batch_update(size_t node_idx,
+                                  const std::vector<size_t>& pruned_list,
+                                  size_t R, std::vector<bool>& need_to_sync) {
   for (auto v : pruned_list) {
     if (v == node_idx) continue;
 
@@ -254,19 +254,19 @@ void VamanaIndex<T, DistCalc>::batch_update(
   }
 }
 
-template <typename T, typename DistCalc>
-void VamanaIndex<T, DistCalc>::occlude_list(std::vector<PI>& node_list,
-                                            float alpha, size_t degree,
-                                            size_t maxc,
-                                            std::vector<PI>& result) {
+template <typename T>
+void VamanaIndex<T>::occlude_list(std::vector<PI>& node_list, float alpha,
+                                  size_t degree, size_t maxc,
+                                  std::vector<PI>& result) {
   std::vector<float> occlude_factor(node_list.size(), 0);
   occlude_list(node_list, alpha, degree, maxc, result, occlude_factor);
 }
 
-template <typename T, typename DistCalc>
-void VamanaIndex<T, DistCalc>::occlude_list(
-    std::vector<PI>& node_list, float alpha, size_t degree, size_t maxc,
-    std::vector<PI>& result, std::vector<float>& occlude_factor) {
+template <typename T>
+void VamanaIndex<T>::occlude_list(std::vector<PI>& node_list, float alpha,
+                                  size_t degree, size_t maxc,
+                                  std::vector<PI>& result,
+                                  std::vector<float>& occlude_factor) {
   if (node_list.empty()) return;
   float cur_alpha = 1;
   while (cur_alpha <= alpha && result.size() < degree) {
@@ -296,10 +296,10 @@ void VamanaIndex<T, DistCalc>::occlude_list(
   }
 }
 
-template <typename T, typename DistCalc>
-void VamanaIndex<T, DistCalc>::prune_neighbors(
-    size_t node_idx, size_t R, size_t C, float alpha,
-    std::vector<PI>& node_list, std::vector<size_t>& pruned_list) {
+template <typename T>
+void VamanaIndex<T>::prune_neighbors(size_t node_idx, size_t R, size_t C,
+                                     float alpha, std::vector<PI>& node_list,
+                                     std::vector<size_t>& pruned_list) {
   if (node_list.empty()) return;
   // 按dist排序
   std::sort(node_list.begin(), node_list.end());
@@ -314,6 +314,6 @@ void VamanaIndex<T, DistCalc>::prune_neighbors(
   }
 }
 
-template class VamanaIndex<float, DistanceL2Float>;
+template class VamanaIndex<float>;
 
 }  // namespace vamana

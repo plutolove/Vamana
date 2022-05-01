@@ -3,23 +3,33 @@
 #include "common/exception.h"
 #include "distance.h"
 #include "fmt/format.h"
+#include "gflags/gflags.h"
 #include "index.h"
 #include "index_option.h"
 
+DEFINE_uint64(N, 80000, "data size");
+DEFINE_uint64(dim, 100, "vector dim");
+DEFINE_uint64(L, 35, "search L size");
+DEFINE_uint64(R, 25, "graph degree");
+DEFINE_string(data_path, "../data/data.bin", "input data file path");
+DEFINE_string(index_path, "../data/index.bin", "index save path");
+DEFINE_string(teat_data_path, "../data/test.bin", "test data path");
 using namespace vamana;
-int main() {
-  DistanceL2Float dis;
-  IndexOption<DistanceL2Float> option;
-  option.N = 80000;
-  option.dim = 100;
+int main(int argc, char **argv) {
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  std::cout << FLAGS_N << std::endl;
+  DistanceL2<float> dis;
+  IndexOption<float> option;
+  option.N = FLAGS_N;
+  option.dim = FLAGS_dim;
   option.calc = dis;
-  option.file_name = "../data/data.bin";
-  option.L = 35;
-  option.R = 25;
-  option.save_path = "../data/index.bin";
-  option.test_file = "../data/test.bin";
+  option.file_name = FLAGS_data_path;
+  option.L = FLAGS_L;
+  option.R = FLAGS_R;
+  option.save_path = FLAGS_index_path;
+  option.test_file = FLAGS_teat_data_path;
   option.test_N = 20000;
-  VamanaIndex<float, DistanceL2Float> index(option);
+  VamanaIndex<float> index(option);
   index.build();
   index.save_index();
   index.calcCentroid();
