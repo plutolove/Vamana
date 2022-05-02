@@ -1,5 +1,5 @@
 # Vamana
-![BUILD](https://github.com/plutolove/Vammana/actions/workflows/cmake.yml/badge.svg)
+![example workflow](https://github.com/plutolove/Vamana/actions/workflows/cmake.yml/badge.svg)
 ## BUILD
 ```bash
 git clone https://github.com/plutolove/Vamana.git --recursive 
