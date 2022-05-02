@@ -43,7 +43,6 @@ size_t VamanaIndex<T>::calcCentroid() {
 template <typename T>
 size_t VamanaIndex<T>::bfsSearch(
     size_t s, const T* q, size_t k, size_t L,
-    std::vector<std::pair<T, size_t>>& top_nov,
     std::vector<std::pair<T, size_t>>& visited_node) {
   // 遍历过的点
   std::unordered_set<size_t> visit{s};
@@ -88,11 +87,6 @@ size_t VamanaIndex<T>::bfsSearch(
         topL.erase(*iter);
       }
     }
-  }
-
-  top_nov.reserve(topL.size());
-  for (auto& kv : topL) {
-    top_nov.push_back(kv);
   }
 
   visited_node.reserve(V.size());
@@ -141,12 +135,10 @@ void VamanaIndex<T>::build() {
         size_t node_idx = index_data[idx];
         size_t node_offset = idx - start_id;
         // topk和visit都是按distance从小到达排好顺序的
-        std::vector<std::pair<T, size_t>> topk;
         std::vector<std::pair<T, size_t>> visit;
         std::set<size_t> visit_idx;
         auto& pruned_vec = pruned_list_vec[node_offset];
-        auto ridx =
-            bfsSearch(ep_idx, vec_ptr[node_idx], 1, option.L, topk, visit);
+        auto ridx = bfsSearch(ep_idx, vec_ptr[node_idx], 1, option.L, visit);
         for (auto& kv : visit) {
           visit_idx.insert(kv.second);
         }
@@ -271,10 +263,8 @@ void VamanaIndex<T>::occlude_list(std::vector<PI>& node_list, float alpha,
   float cur_alpha = 1;
   while (cur_alpha <= alpha && result.size() < degree) {
     size_t start = 0;
-    while (result.size() < degree && (start) < node_list.size() &&
-           start < maxc) {
+    while (result.size() < degree && start < node_list.size() && start < maxc) {
       auto& p = node_list[start];
-      // alpha * dist(p*, p') < dist(p, p')  -> remove(p')
       if (occlude_factor[start] > cur_alpha) {
         start++;
         continue;
@@ -283,8 +273,9 @@ void VamanaIndex<T>::occlude_list(std::vector<PI>& node_list, float alpha,
       occlude_factor[start] = std::numeric_limits<float>::max();
       result.push_back(p);
       for (size_t t = start + 1; t < node_list.size() && t < maxc; t++) {
+        // alpha * dist(p*, p') < dist(p, p')  -> remove(p')
         if (occlude_factor[t] > alpha) continue;
-        float dist = option.calc(vec_ptr[node_list[start].second],
+        float dist = option.calc(vec_ptr[p.second],
                                  vec_ptr[node_list[t].second], option.dim);
 
         occlude_factor[t] =

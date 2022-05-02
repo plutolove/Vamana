@@ -68,8 +68,7 @@ class VamanaIndex {
 
   // 起点，查询点，top k， search list size， topk res，vis list
   size_t bfsSearch(size_t s, const T* q, size_t k, size_t L,
-                   std::vector<std::pair<T, size_t>>& visited_nodes,
-                   std::vector<std::pair<T, size_t>>& visited_idx);
+                   std::vector<std::pair<T, size_t>>& visited);
 
   void build();
 
@@ -163,10 +162,9 @@ class VamanaIndex {
     size_t diff = 0;
     for (size_t idx = 0; idx < 300; idx++) {
       size_t i = index_data[idx];
-      std::vector<std::pair<T, size_t>> topk;
       std::vector<std::pair<T, size_t>> visit;
-      auto ridx = bfsSearch(option.centroid_idx, _test_ptr[i], 1, option.L,
-                            topk, visit);
+      auto ridx =
+          bfsSearch(option.centroid_idx, _test_ptr[i], 1, option.L + 5, visit);
       auto fidx = forceSearch(_test_ptr[i]);
       if (fidx == ridx)
         same++;
