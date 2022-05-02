@@ -34,7 +34,6 @@ int main(int argc, char **argv) {
   VamanaIndex<float> index(option);
   index.build();
   index.save_index();
-  index.calcCentroid();
   index.load_index();
   index.test();
   return 0;

@@ -112,13 +112,13 @@ void VamanaIndex<T>::build() {
   size_t ep_idx = calcCentroid();
   auto s = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> diff;
-  size_t ITER_NUM = 2;
+  constexpr size_t ITER_NUM = 2;
   float alpha = option.alpha;
   for (size_t iter_id = 0; iter_id < ITER_NUM; ++iter_id) {
-    if (iter_id == 0) {
-      option.alpha = 1;
-    } else {
+    if (iter_id == (ITER_NUM - 1)) {
       option.alpha = alpha;
+    } else {
+      option.alpha = 1;
     }
     std::cout << "alpha: " << option.alpha << std::endl;
     // 标记需要异步更新图的点
