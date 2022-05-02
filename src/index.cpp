@@ -102,7 +102,7 @@ void VamanaIndex<T>::build() {
   // 分NUM_SYNCS次batch执行
   size_t NUM_SYNCS = DIV_ROUND_UP(option.N, (64 * 64));
   size_t round_size = DIV_ROUND_UP(option.N, NUM_SYNCS);  // size of each batch
-
+  if (option.thread_num > 0) omp_set_num_threads(option.thread_num);
   init_random_graph();
   std::vector<size_t> index_data(option.N);
   std::iota(index_data.begin(), index_data.end(), 0);

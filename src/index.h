@@ -170,10 +170,10 @@ class VamanaIndex {
         same++;
       else
         diff++;
-      std::cout << fmt::format(
-          "search res: {}, except idx: {}, force dist: {}, ann dist: {}\n",
-          ridx, fidx, option.calc(vec_ptr[fidx], _test_ptr[i], option.dim),
-          option.calc(vec_ptr[ridx], _test_ptr[i], option.dim));
+      // std::cout << fmt::format(
+      //    "search res: {}, except idx: {}, force dist: {}, ann dist: {}\n",
+      //    ridx, fidx, option.calc(vec_ptr[fidx], _test_ptr[i], option.dim),
+      //    option.calc(vec_ptr[ridx], _test_ptr[i], option.dim));
     }
     std::cout << fmt::format("test same: {}, diff: {}, same rate: {}\n", same,
                              diff, same * 1.0 / (same + diff));

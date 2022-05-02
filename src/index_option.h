@@ -19,6 +19,8 @@ struct IndexOption {
   size_t C = 750;
   // test data size
   size_t test_N;
+  // thread num
+  int thread_num = 16;
   std::string test_file;
   // Centroid
   size_t centroid_idx;

@@ -14,6 +14,7 @@ DEFINE_uint64(R, 25, "graph degree");
 DEFINE_string(data_path, "../data/data.bin", "input data file path");
 DEFINE_string(index_path, "../data/index.bin", "index save path");
 DEFINE_string(teat_data_path, "../data/test.bin", "test data path");
+DEFINE_int32(thread_num, 16, "openmp thread num");
 using namespace vamana;
 int main(int argc, char **argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -28,6 +29,7 @@ int main(int argc, char **argv) {
   option.R = FLAGS_R;
   option.save_path = FLAGS_index_path;
   option.test_file = FLAGS_teat_data_path;
+  option.thread_num = FLAGS_thread_num;
   option.test_N = 20000;
   VamanaIndex<float> index(option);
   index.build();
