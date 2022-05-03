@@ -115,11 +115,12 @@ void VamanaIndex<T>::build() {
   std::random_shuffle(index_data.begin(), index_data.end());
 
   size_t ep_idx = calcCentroid();
-  auto s = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> diff;
   constexpr size_t ITER_NUM = 2;
   float alpha = option.alpha;
   for (size_t iter_id = 0; iter_id < ITER_NUM; ++iter_id) {
+    auto s = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff;
+
     if (iter_id == (ITER_NUM - 1)) {
       option.alpha = alpha;
     } else {
@@ -204,6 +205,9 @@ void VamanaIndex<T>::build() {
         }
       }
     }
+    diff = std::chrono::high_resolution_clock::now() - s;
+    std::cout << fmt::format("iter_id: {}, alpha: {}, time cost: {}s\n",
+                             iter_id, option.alpha, diff.count());
   }
 #pragma omp parallel for schedule(dynamic, 65536)
   for (size_t idx = 0; idx < index_data.size(); ++idx) {
@@ -225,9 +229,6 @@ void VamanaIndex<T>::build() {
       for (auto id : new_out) _graph[node_idx].emplace_back(id);
     }
   }
-  diff = std::chrono::high_resolution_clock::now() - s;
-  std::cout << fmt::format("build index success, time cost: {}s\n",
-                           diff.count());
 }
 
 template <typename T>
