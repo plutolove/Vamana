@@ -6,6 +6,7 @@
 #include <mutex>
 #include <random>
 #include <utility>
+#include <vector>
 
 #include "distance.h"
 #include "fmt/format.h"
@@ -25,17 +26,21 @@ size_t VamanaIndex<T>::calcCentroid() {
   }
   for (size_t i = 0; i < option.dim; ++i) ce[i] /= option.N;
 
-  auto* ce_ptr = ce.data();
-  T dist = option.calc(ce_ptr, vec_ptr[0], option.dim);
+  std::vector<T> dist(option.N, 0);
+
+  const auto* ce_ptr = ce.data();
+#pragma omp parallel for schedule(dynamic, 65536)
+  for (size_t i = 0; i < option.N; ++i) {
+    dist[i] = option.calc(vec_ptr[i], ce_ptr, option.dim);
+  }
+
   size_t idx = 0;
-  for (size_t i = 1; i < option.N; ++i) {
-    auto tmp_dist = option.calc(ce_ptr, vec_ptr[i], option.dim);
-    if (tmp_dist < dist) {
-      dist = tmp_dist;
+  for (size_t i = 0; i < option.N; i++) {
+    if (dist[i] < dist[idx]) {
       idx = i;
     }
   }
-  std::cout << fmt::format("calcCentroid idx: {}, dist: {}\n", idx, dist);
+  std::cout << fmt::format("calcCentroid idx: {}, dist: {}\n", idx, dist[idx]);
   option.centroid_idx = idx;
   return idx;
 }

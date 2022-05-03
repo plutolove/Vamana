@@ -47,6 +47,7 @@ class VamanaIndex {
     std::default_random_engine generator(seed);
     // 随机编号
     std::uniform_int_distribution<int> dist(0, option.N - 1);
+#pragma omp parallel for schedule(dynamic, 65536)
     for (size_t i = 0; i < _graph.size(); i++) {
       auto& child = _graph[i];
       child.reserve(std::ceil(option.R * 1.3 * 1.05));
