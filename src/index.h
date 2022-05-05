@@ -114,6 +114,8 @@ class VamanaIndex {
   void batch_update(size_t node_idx, const std::vector<size_t>& pruned_list,
                     size_t R, std::vector<bool>& need_to_sync);
 
+  size_t save_disk_index();
+
   size_t save_index() {
     std::cout << "start save index" << std::endl;
     std::ofstream fout(option.save_path, std::ios::binary);

@@ -1,4 +1,5 @@
 #include <time.h>
+#include <unistd.h>
 
 #include <algorithm>
 #include <cstddef>
@@ -309,6 +310,18 @@ void VamanaIndex<T>::prune_neighbors(size_t node_idx, size_t R, size_t C,
   for (auto iter : result) {
     if (iter.second != node_idx) pruned_list.emplace_back(iter.second);
   }
+}
+
+template <typename T>
+size_t VamanaIndex<T>::save_disk_index() {
+  // disk index format
+  /*
+  first block: the number of point, dim, centroid_idx
+
+  4k per block: [vec: the number of neighbors: neighbors]
+  */
+  
+  return 0;
 }
 
 template class VamanaIndex<float>;
