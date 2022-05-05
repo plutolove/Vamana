@@ -330,13 +330,20 @@ size_t VamanaIndex<T>::save_disk_index(const std::string& path) {
   char block[BLOK_SIZE];
   int neighbors[200];
   // write the number of point(size_t), dim(size_t), centroid_idx(size_t)
+  int offset = 0;
   memset(block, -1, sizeof(block));
-  memcpy(block, reinterpret_cast<char*>(&option.N), sizeof(option.N));
-  memcpy(block + sizeof(option.N), reinterpret_cast<char*>(&option.dim),
-         sizeof(option.dim));
-  memcpy(block + sizeof(option.N) + sizeof(option.dim),
-         reinterpret_cast<char*>(&option.centroid_idx),
-         sizeof(option.centroid_idx));
+
+  memcpy(block, &option.N, sizeof(option.N));
+  offset += sizeof(option.N);
+
+  memcpy(block + offset, &option.dim, sizeof(option.dim));
+  offset += sizeof(option.dim);
+
+  memcpy(block + offset, &option.R, sizeof(option.R));
+  offset += sizeof(option.R);
+
+  memcpy(block + offset, &option.centroid_idx, sizeof(option.centroid_idx));
+
   fout.write(block, sizeof(char) * BLOK_SIZE);
 
   size_t num_per_block =
@@ -380,9 +387,30 @@ size_t VamanaIndex<T>::load_disk_index(const std::string& path) {
 
   char block[BLOK_SIZE];
   fin.read(block, BLOK_SIZE);
-  size_t N;
+  size_t N, dim, R, centroid_idx;
+  size_t offset = 0;
   memcpy(&N, block, sizeof(N));
-  std::cout << N << std::endl;
+  offset += sizeof(N);
+  memcpy(&dim, block + offset, sizeof(dim));
+  offset += sizeof(dim);
+  memcpy(&R, block + offset, sizeof(R));
+  offset += sizeof(R);
+  memcpy(&centroid_idx, block + offset, sizeof(centroid_idx));
+  std::cout << fmt::format("n:{}, dim:{}, r:{}, idx:{}\n", N, dim, R,
+                           centroid_idx);
+  size_t num_per_block =
+      BLOK_SIZE / (sizeof(T) * option.dim + sizeof(int32_t) * (option.R + 1));
+
+  size_t block_num = ROUND_UP(option.N, num_per_block);
+  size_t idx = 0;
+  for (size_t block_id = 0; block_id < block_num; ++block_id) {
+    fin.read(block, BLOK_SIZE);
+    auto* ptr = reinterpret_cast<T*>(block);
+    for (size_t i = 0; i < dim; i++) {
+      std::cout << ptr[i] << std::endl;
+    }
+    break;
+  }
   return 0;
 }
 
