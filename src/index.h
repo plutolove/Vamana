@@ -237,7 +237,7 @@ class VamanaIndex {
   std::vector<const T*> _test_ptr;
   // 保存每个vec的起始ptr
   std::vector<const T*> vec_ptr;
-  std::vector<std::vector<size_t>> _graph;
+  std::vector<std::vector<int32_t>> _graph;
   std::vector<std::mutex> _locks;
   IndexOption<T> option;
 };
