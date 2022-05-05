@@ -32,9 +32,12 @@ int main(int argc, char **argv) {
   option.thread_num = FLAGS_thread_num;
   option.test_N = 20000;
   VamanaIndex<float> index(option);
-  index.build();
-  index.save_index();
-  index.load_index();
-  index.test();
+  // index.build();
+  // index.save_disk_index("../data/disk_index.bin");
+  index.load_disk_index("../data/disk_index.bin");
+  // index.save_index();
+  // index.load_index();
+  // index.test();
+
   return 0;
 }

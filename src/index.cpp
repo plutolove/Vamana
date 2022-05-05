@@ -3,12 +3,17 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
+#include <cstring>
+#include <fstream>
+#include <ios>
 #include <mutex>
 #include <random>
 #include <utility>
 #include <vector>
 
+#include "common/define.h"
 #include "distance.h"
 #include "fmt/format.h"
 #include "index.h"
@@ -313,14 +318,71 @@ void VamanaIndex<T>::prune_neighbors(size_t node_idx, size_t R, size_t C,
 }
 
 template <typename T>
-size_t VamanaIndex<T>::save_disk_index() {
+size_t VamanaIndex<T>::save_disk_index(const std::string& path) {
   // disk index format
   /*
-  first block: the number of point, dim, centroid_idx
+  first block: the number of point(size_t), dim(size_t), centroid_idx(size_t)
 
   4k per block: [vec: the number of neighbors: neighbors]
   */
-  
+  std::ofstream fout(path, std::ios_base::binary);
+  // 4k per block
+  char block[BLOK_SIZE];
+  int neighbors[200];
+  // write the number of point(size_t), dim(size_t), centroid_idx(size_t)
+  memset(block, -1, sizeof(block));
+  memcpy(block, reinterpret_cast<char*>(&option.N), sizeof(option.N));
+  memcpy(block + sizeof(option.N), reinterpret_cast<char*>(&option.dim),
+         sizeof(option.dim));
+  memcpy(block + sizeof(option.N) + sizeof(option.dim),
+         reinterpret_cast<char*>(&option.centroid_idx),
+         sizeof(option.centroid_idx));
+  fout.write(block, sizeof(char) * BLOK_SIZE);
+
+  size_t num_per_block =
+      BLOK_SIZE / (sizeof(T) * option.dim + sizeof(int32_t) * (option.R + 1));
+
+  size_t block_num = ROUND_UP(option.N, num_per_block);
+  size_t idx = 0;
+  for (size_t block_id = 0; block_id < block_num; ++block_id) {
+    // block 全初始化-1
+    memset(block, -1, sizeof(block));
+    std::string raw_data;
+    for (size_t id = 0; id < num_per_block and idx < option.N; ++id) {
+      // 将embedding保存到raw_data
+      raw_data.append(reinterpret_cast<const char*>(vec_ptr[idx]),
+                      sizeof(T) * option.dim);
+      int32_t num_neighbors = _graph.size();
+      raw_data.append(reinterpret_cast<char*>(&num_neighbors), sizeof(int32_t));
+      // neighbors 按R保存，不够的补-1
+      memset(neighbors, -1, sizeof(neighbors));
+      size_t neighbors_idx = 0;
+      for (auto& v : _graph[idx]) {
+        neighbors[neighbors_idx++] = v;
+      }
+      // 保存neighbors到raw_data
+      raw_data.append(reinterpret_cast<char*>(neighbors),
+                      sizeof(int32_t) * option.R);
+
+      idx++;
+    }
+    memcpy(block, raw_data.data(), BLOK_SIZE);
+    // 一整个block写入
+    fout.write(block, BLOK_SIZE);
+  }
+  fout.close();
+  return 0;
+}
+
+template <typename T>
+size_t VamanaIndex<T>::load_disk_index(const std::string& path) {
+  std::ifstream fin(path, std::ios_base::binary);
+
+  char block[BLOK_SIZE];
+  fin.read(block, BLOK_SIZE);
+  size_t N;
+  memcpy(&N, block, sizeof(N));
+  std::cout << N << std::endl;
   return 0;
 }
 
