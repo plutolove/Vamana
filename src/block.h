@@ -15,14 +15,7 @@ namespace vamana {
 
 struct Block {
   Block() {}
-  Block(size_t start, size_t len) : start(start), len(len) {
-    _data = new char[BLOK_SIZE];
-    memset(_data, 0, sizeof(char) * BLOK_SIZE);
-  }
-  ~Block() {
-    std::cout << "release block" << std::endl;
-    // if (_data) delete[] _data;
-  }
+  Block(size_t start, size_t len) : start(start), len(len) {}
   // 获取数据ptr
   template <typename T>
   inline T* getPtr(size_t idx) {
@@ -36,7 +29,7 @@ struct Block {
     return size;
   }
 
-  char* _data = nullptr;
+  char _data[BLOK_SIZE];
   size_t start;
   size_t len;
   size_t idx;
