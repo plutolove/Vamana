@@ -407,7 +407,7 @@ size_t VamanaIndex<T>::load_disk_index(const std::string& path) {
     fin.read(block, BLOK_SIZE);
     auto* ptr = reinterpret_cast<T*>(block);
     for (size_t i = 0; i < dim; i++) {
-      std::cout << ptr[i] << std::endl;
+      // std::cout << ptr[i] << std::endl;
     }
     break;
   }

@@ -15,16 +15,9 @@
 #include <utility>
 #include <vector>
 
+#include "common/define.h"
 #include "fmt/format.h"
 #include "index_option.h"
-
-#define ROUND_UP(X, Y) \
-  ((((uint64_t)(X) / (Y)) + ((uint64_t)(X) % (Y) != 0)) * (Y))
-
-#define DIV_ROUND_UP(X, Y) (((uint64_t)(X) / (Y)) + ((uint64_t)(X) % (Y) != 0))
-
-// round down X to the nearest multiple of Y
-#define ROUND_DOWN(X, Y) (((uint64_t)(X) / (Y)) * (Y))
 
 namespace vamana {
 
