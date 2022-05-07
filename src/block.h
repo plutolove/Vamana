@@ -19,12 +19,11 @@ namespace vamana {
 struct Block : boost::noncopyable {
   Block() {}
   Block(size_t start, size_t len) : start(start), len(len) {
-    data = reinterpret_cast<char*>(
-        boost::alignment::aligned_alloc(512, BLOK_SIZE));
+    data = reinterpret_cast<char*>(std::aligned_alloc(512, BLOK_SIZE));
   }
 
   ~Block() {
-    if (data) boost::alignment::aligned_free(data);
+    if (data) free(data);
   }
 
   // 获取数据ptr
