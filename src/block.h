@@ -50,7 +50,7 @@ class BlockReader : boost::noncopyable {
   using lockfree_queue = boost::lockfree::queue<io_context_t>;
 
  public:
-  BlockReader(size_t ctx_size, const std::string& path);
+  BlockReader(const std::string& path);
   ~BlockReader() {
     if (fd != -1) {
       ::fcntl(fd, F_GETFD);
