@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include <iostream>
+#include <memory>
 
 #include "block.h"
 #include "common/define.h"
@@ -38,24 +39,23 @@ int main(int argc, char **argv) {
   VamanaIndex<float> index(option);
   // index.build();
   // index.save_disk_index("../data/disk_index.bin");
-  index.load_disk_index("../data/disk_index.bin");
+  // index.load_disk_index("../data/disk_index.bin");
   // index.save_index();
   // index.load_index();
   // index.test();
   BlockReader reader(6, "../data/disk_index.bin");
-  std::vector<Block> blocks{std::move(Block(0, BLOK_SIZE))};
-  std::cout << "--------------" << std::endl;
+  std::vector<std::shared_ptr<Block>> blocks{
+      std::make_shared<Block>(0, BLOK_SIZE)};
   reader.read(blocks);
   size_t N, dim, R, centroid_idx;
   size_t offset = 0;
-  std::cout << blocks[0]._data << std::endl;
-  memcpy(&N, blocks[0]._data, sizeof(N));
+  memcpy(&N, blocks[0]->data, sizeof(N));
   offset += sizeof(N);
-  memcpy(&dim, blocks[0]._data + offset, sizeof(dim));
+  memcpy(&dim, blocks[0]->data + offset, sizeof(dim));
   offset += sizeof(dim);
-  memcpy(&R, blocks[0]._data + offset, sizeof(R));
+  memcpy(&R, blocks[0]->data + offset, sizeof(R));
   offset += sizeof(R);
-  memcpy(&centroid_idx, blocks[0]._data + offset, sizeof(centroid_idx));
+  memcpy(&centroid_idx, blocks[0]->data + offset, sizeof(centroid_idx));
   std::cout << fmt::format("n:{}, dim:{}, r:{}, idx:{}\n", N, dim, R,
                            centroid_idx);
   return 0;

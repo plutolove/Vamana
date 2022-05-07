@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <iostream>
+#include <memory>
 
 #include "block.h"
 #include "common/define.h"
@@ -41,7 +42,7 @@ BlockReader::BlockReader(size_t ctx_size, const std::string& path)
   }*/
 }
 
-bool BlockReader::read(std::vector<Block>& blocks) {
+bool BlockReader::read(std::vector<std::shared_ptr<Block>>& blocks) {
   io_context_t ctx = 0;
   int ret = io_setup(MAX_EVENTS, &ctx);
   // if (not io_contexts.pop(ctx)) {
@@ -51,7 +52,6 @@ bool BlockReader::read(std::vector<Block>& blocks) {
   size_t iter_num = DIV_ROUND_UP(blocks.size(), MAX_EVENTS);
   size_t idx = 0;
   for (size_t iter_id = 0; iter_id < iter_num; ++iter_id) {
-    std::cout << "read ----------" << std::endl;
     size_t batch_size = std::min((size_t)blocks.size() - (iter_id * MAX_EVENTS),
                                  (size_t)MAX_EVENTS);
 
@@ -59,10 +59,8 @@ bool BlockReader::read(std::vector<Block>& blocks) {
     std::vector<io_event_t> evts(batch_size);
     std::vector<struct iocb> cb(batch_size);
     for (size_t i = 0; i < batch_size and idx < blocks.size(); ++i) {
-      std::cout << fmt::format("read block start: {}, len: {}\n",
-                               blocks[idx].start, blocks[idx].len);
-      io_prep_pread(cb.data() + i, fd, blocks[idx]._data, blocks[idx].len,
-                    blocks[idx].start);
+      io_prep_pread(cb.data() + i, fd, blocks[idx]->data, blocks[idx]->len,
+                    blocks[idx]->start);
       ++idx;
     }
 

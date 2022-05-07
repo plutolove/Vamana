@@ -1,6 +1,8 @@
 #pragma once
 #include <libaio.h>
 
+#include <boost/align/detail/aligned_alloc_posix.hpp>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -8,28 +10,37 @@
 
 #include "boost/core/noncopyable.hpp"
 #include "boost/lockfree/queue.hpp"
+#include "boost/noncopyable.hpp"
 #include "common/define.h"
 #include "fcntl.h"
 
 namespace vamana {
 
-struct Block {
+struct Block : boost::noncopyable {
   Block() {}
-  Block(size_t start, size_t len) : start(start), len(len) {}
+  Block(size_t start, size_t len) : start(start), len(len) {
+    data = reinterpret_cast<char*>(
+        boost::alignment::aligned_alloc(512, BLOK_SIZE));
+  }
+
+  ~Block() {
+    if (data) boost::alignment::aligned_free(data);
+  }
+
   // 获取数据ptr
   template <typename T>
   inline T* getPtr(size_t idx) {
-    return reinterpret_cast<T*>(_data + idx);
+    return reinterpret_cast<T*>(data + idx);
   }
 
   // 获取Neighbor Size
   inline int32_t getNeighborSize(size_t idx) {
     int32_t size = -1;
-    memcpy(&size, _data + idx, sizeof(int32_t));
+    memcpy(&size, data + idx, sizeof(int32_t));
     return size;
   }
 
-  char _data[BLOK_SIZE];
+  char* data = nullptr;
   size_t start;
   size_t len;
   size_t idx;
@@ -55,7 +66,7 @@ class BlockReader : boost::noncopyable {
     std::cout << "io_destroy cnt: " << cnt << std::endl;
   }
 
-  bool read(std::vector<Block>& blocks);
+  bool read(std::vector<std::shared_ptr<Block>>& blocks);
 
  protected:
   uint64_t file_sz;
