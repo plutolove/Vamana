@@ -47,7 +47,7 @@ bool BlockReader::read(std::vector<std::shared_ptr<Block>>& blocks) {
   if (not io_contexts.pop(ctx)) {
     int ret = io_setup(MAX_EVENTS, &ctx);
     if (ret != 0) {
-      std::cout << fmt::format("io setup success, ret: {}, status: {}", ret,
+      std::cout << fmt::format("io_setup() error, ret: {}, status: {}", ret,
                                strerror(ret))
                 << std::endl;
     }
@@ -74,18 +74,17 @@ bool BlockReader::read(std::vector<std::shared_ptr<Block>>& blocks) {
 
     int64_t ret = io_submit(ctx, (int64_t)batch_size, cbs.data());
     if (ret != (int64_t)batch_size) {
-      std::cerr << "io_submit() failed; returned " << ret
-                << ", expected=" << batch_size << ", ernno=" << errno << " ="
-                << ::strerror(-ret);
-      std::cout << "ctx: " << ctx << "\n";
+      std::cout << fmt::format("io_submit() failed, ret: {}, status: {}", ret,
+                               strerror(-ret))
+                << std::endl;
       return false;
     } else {
       ret = io_getevents(ctx, (int64_t)batch_size, (int64_t)batch_size,
                          evts.data(), nullptr);
       if (ret != (int64_t)batch_size) {
-        std::cerr << "io_getevents() failed; returned " << ret
-                  << ", expected=" << batch_size << ", ernno=" << errno << "="
-                  << ::strerror(-ret) << "\n";
+        std::cout << fmt::format("io_getevents() failed, ret: {}, status: {}",
+                                 ret, strerror(-ret))
+                  << std::endl;
         return false;
       } else {
         break;
