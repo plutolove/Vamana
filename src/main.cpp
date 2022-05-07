@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
   // index.save_index();
   // index.load_index();
   // index.test();
-  BlockReader reader(6, "../data/disk_index.bin");
+  BlockReader reader("../data/disk_index.bin");
   std::vector<std::shared_ptr<Block>> blocks{
       std::make_shared<Block>(0, BLOK_SIZE)};
   reader.read(blocks);

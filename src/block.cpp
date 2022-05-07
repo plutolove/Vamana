@@ -12,8 +12,8 @@ namespace vamana {
 typedef struct io_event io_event_t;
 typedef struct iocb iocb_t;
 
-BlockReader::BlockReader(size_t ctx_size, const std::string& path)
-    : io_contexts(lockfree_queue(ctx_size)) {
+BlockReader::BlockReader(const std::string& path)
+    : io_contexts(lockfree_queue(1024)) {
   int flags = O_DIRECT | O_RDONLY;
   fd = ::open(path.c_str(), flags);
   assert(fd != -1);
@@ -44,11 +44,15 @@ BlockReader::BlockReader(size_t ctx_size, const std::string& path)
 
 bool BlockReader::read(std::vector<std::shared_ptr<Block>>& blocks) {
   io_context_t ctx = 0;
-  int ret = io_setup(MAX_EVENTS, &ctx);
-  // if (not io_contexts.pop(ctx)) {
-  // std::cout << "no available io context" << std::endl;
-  // return false;
-  // }
+  if (not io_contexts.pop(ctx)) {
+    int ret = io_setup(MAX_EVENTS, &ctx);
+    if (ret != 0) {
+      std::cout << fmt::format("io setup success, ret: {}, status: {}", ret,
+                               strerror(ret))
+                << std::endl;
+    }
+  }
+
   size_t iter_num = DIV_ROUND_UP(blocks.size(), MAX_EVENTS);
   size_t idx = 0;
   for (size_t iter_id = 0; iter_id < iter_num; ++iter_id) {
@@ -87,6 +91,9 @@ bool BlockReader::read(std::vector<std::shared_ptr<Block>>& blocks) {
         break;
       }
     }
+  }
+  if (not io_contexts.push(ctx)) {
+    io_destroy(ctx);
   }
   return true;
 }
