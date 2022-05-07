@@ -17,29 +17,6 @@ BlockReader::BlockReader(const std::string& path)
   int flags = O_DIRECT | O_RDONLY;
   fd = ::open(path.c_str(), flags);
   assert(fd != -1);
-  /*
-  // 初始化ctx_size个io context
-  size_t cnt = 0;
-  size_t tt = 0;
-  while (true) {
-    io_context_t ctx = 0;
-    int ret = io_setup(MAX_EVENTS, &ctx);
-    if (ret != 0) {
-      std::cout << fmt::format("io setup error, ret: {}, idx: {}", ret, cnt)
-                << std::endl;
-      std::cout << "error msg: " << strerror(ret) << std::endl;
-      continue;
-    } else {
-      std::cout << fmt::format("io setup success, ret: {}, idx: {}, error", ret,
-                               cnt)
-                << std::endl;
-      std::cout << "error msg: " << strerror(ret) << std::endl;
-    }
-    io_contexts.push(ctx);
-    cnt++;
-    tt++;
-    if (cnt >= ctx_size) break;
-  }*/
 }
 
 bool BlockReader::read(std::vector<std::shared_ptr<Block>>& blocks) {
