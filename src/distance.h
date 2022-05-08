@@ -10,7 +10,7 @@ namespace vamana {
 
 template <typename T>
 struct DistanceL2 {
-  float operator()(const T* x, const T* y, size_t dim) {
+  T operator()(const T* x, const T* y, size_t dim) {
     if constexpr (std::is_same_v<T, float>) {
       return ComputeL2Distance_AVX(x, y, dim);
     } else if constexpr (std::is_same_v<T, int8_t>) {
