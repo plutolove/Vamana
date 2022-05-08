@@ -6,6 +6,7 @@
 #include "block.h"
 #include "common/define.h"
 #include "common/exception.h"
+#include "disk_index.h"
 #include "distance.h"
 #include "fmt/format.h"
 #include "gflags/gflags.h"
@@ -43,20 +44,7 @@ int main(int argc, char **argv) {
   // index.save_index();
   // index.load_index();
   // index.test();
-  BlockReader reader("../data/disk_index.bin");
-  std::vector<std::shared_ptr<Block>> blocks{
-      std::make_shared<Block>(0, BLOK_SIZE)};
-  reader.read(blocks);
-  size_t N, dim, R, centroid_idx;
-  size_t offset = 0;
-  memcpy(&N, blocks[0]->data, sizeof(N));
-  offset += sizeof(N);
-  memcpy(&dim, blocks[0]->data + offset, sizeof(dim));
-  offset += sizeof(dim);
-  memcpy(&R, blocks[0]->data + offset, sizeof(R));
-  offset += sizeof(R);
-  memcpy(&centroid_idx, blocks[0]->data + offset, sizeof(centroid_idx));
-  std::cout << fmt::format("n:{}, dim:{}, r:{}, idx:{}\n", N, dim, R,
-                           centroid_idx);
+
+  DiskIndex<float> dindex("../data/disk_index.bin");
   return 0;
 }

@@ -63,9 +63,47 @@ bool BlockReader::read(std::vector<std::shared_ptr<Block>>& blocks) {
                                  ret, strerror(-ret))
                   << std::endl;
         return false;
-      } else {
-        break;
       }
+    }
+  }
+  if (not io_contexts.push(ctx)) {
+    io_destroy(ctx);
+  }
+  return true;
+}
+
+bool BlockReader::read(std::shared_ptr<Block>& block) {
+  io_context_t ctx = 0;
+  if (not io_contexts.pop(ctx)) {
+    int ret = io_setup(MAX_EVENTS, &ctx);
+    if (ret != 0) {
+      std::cout << fmt::format("io_setup() error, ret: {}, status: {}", ret,
+                               strerror(ret))
+                << std::endl;
+    }
+  }
+
+  std::vector<iocb_t*> cbs(1, nullptr);
+  std::vector<io_event_t> evts(1);
+  std::vector<struct iocb> cb(1);
+
+  io_prep_pread(cb.data(), fd, block->data, block->len, block->start);
+
+  cbs[0] = cb.data();
+
+  int64_t ret = io_submit(ctx, (int64_t)1, cbs.data());
+  if (ret != (int64_t)1) {
+    std::cout << fmt::format("io_submit() failed, ret: {}, status: {}", ret,
+                             strerror(-ret))
+              << std::endl;
+    return false;
+  } else {
+    ret = io_getevents(ctx, (int64_t)1, (int64_t)1, evts.data(), nullptr);
+    if (ret != (int64_t)1) {
+      std::cout << fmt::format("io_getevents() failed, ret: {}, status: {}",
+                               ret, strerror(-ret))
+                << std::endl;
+      return false;
     }
   }
   if (not io_contexts.push(ctx)) {

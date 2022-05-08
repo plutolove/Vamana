@@ -64,8 +64,11 @@ class BlockReader : boost::noncopyable {
     }
     std::cout << "io_destroy cnt: " << cnt << std::endl;
   }
-
+  
+  // 读取多个block
   bool read(std::vector<std::shared_ptr<Block>>& blocks);
+  // 读取一个block
+  bool read(std::shared_ptr<Block>& block);
 
  protected:
   uint64_t file_sz;
