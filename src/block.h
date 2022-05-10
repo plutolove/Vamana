@@ -1,6 +1,7 @@
 #pragma once
 #include <libaio.h>
 
+#include <atomic>
 #include <boost/align/detail/aligned_alloc_posix.hpp>
 #include <cstddef>
 #include <cstdint>
@@ -43,6 +44,7 @@ struct Block : boost::noncopyable {
   size_t start;
   size_t len;
   size_t idx;
+  std::atomic_int ref_cnt{0};
 };
 
 class BlockReader : boost::noncopyable {
@@ -64,7 +66,7 @@ class BlockReader : boost::noncopyable {
     }
     std::cout << "io_destroy cnt: " << cnt << std::endl;
   }
-  
+
   // 读取多个block
   bool read(std::vector<std::shared_ptr<Block>>& blocks);
   // 读取一个block

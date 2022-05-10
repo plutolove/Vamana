@@ -1,6 +1,0 @@
-[submodule "third_deps/fmt"]
-	path = third_deps/fmt
-	url = https://github.com/fmtlib/fmt.git
-[submodule "third_deps/gflags"]
-	path = third_deps/gflags
-	url = https://github.com/gflags/gflags.git

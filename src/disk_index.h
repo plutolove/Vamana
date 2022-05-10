@@ -32,6 +32,7 @@ class DiskIndex : boost::noncopyable {
     std::cout << fmt::format(
         "N: {}, dim: {}, R:{}, centroid_idx: {}, num_per_block: {}\n", N, dim,
         R, centroid_idx, num_per_block);
+    size_per_record = sizeof(T) * dim + sizeof(int32_t) * (R + 1);
   }
 
   inline int32_t block_id(size_t idx) { return idx / num_per_block + 1; }
@@ -42,6 +43,7 @@ class DiskIndex : boost::noncopyable {
   std::shared_ptr<Block> head;
   size_t num_per_block;
   size_t N, dim, R, centroid_idx;
+  size_t size_per_record;
   DistanceL2<T> calc;
 };
 

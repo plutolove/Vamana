@@ -13,21 +13,17 @@ else()
     message(FATAL_ERROR "No OpenMP support")
 endif()
 
+find_package(folly REQUIRED)
 find_package(Boost REQUIRED)
 find_library(JemallocLib jemalloc)
+find_package(gflags REQUIRED)
 
 include_directories(${CMAKE_SOURCE_DIR}/src/)
-add_subdirectory(${CMAKE_SOURCE_DIR}/third_deps/fmt)
-include_directories(${CMAKE_SOURCE_DIR}/third_deps/fmt/include)
-
-add_subdirectory(${CMAKE_SOURCE_DIR}/third_deps/gflags)
-include_directories(${CMAKE_SOURCE_DIR}/third_deps/gflags/include)
 
 file(GLOB_RECURSE SRC ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/*/*.cpp)
 
 add_executable(Vamana ${SRC})
-target_link_libraries(Vamana fmt-header-only)
-target_link_libraries(Vamana gflags::gflags ${Boost_LIBRARIES} aio ${JemallocLibs})
+target_link_libraries(Vamana gflags ${Boost_LIBRARIES} aio ${JemallocLibs} ${FOLLY_LIBRARIES})
 target_compile_options(Vamana PRIVATE -mavx2 -mavx -msse -msse2 -fPIC -fopenmp -fopenmp-simd)
 
 add_executable(gen_data ${CMAKE_SOURCE_DIR}/tools/gen_data.cpp)
