@@ -18,7 +18,10 @@
 namespace vamana {
 
 struct Block : boost::noncopyable {
-  Block() {}
+  Block()
+      : start(-1),
+        len(BLOK_SIZE),
+        data(reinterpret_cast<char*>(std::aligned_alloc(512, BLOK_SIZE))) {}
   Block(size_t start, size_t len) : start(start), len(len) {
     data = reinterpret_cast<char*>(std::aligned_alloc(512, BLOK_SIZE));
   }
@@ -46,6 +49,8 @@ struct Block : boost::noncopyable {
   size_t idx;
   std::atomic_int ref_cnt{0};
 };
+
+using BlockPtr = Block*;
 
 class BlockReader : boost::noncopyable {
   using lockfree_queue = boost::lockfree::queue<io_context_t>;
