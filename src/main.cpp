@@ -33,6 +33,8 @@ int main(int argc, char **argv) {
   option.file_name = FLAGS_data_path;
   option.L = FLAGS_L;
   option.R = FLAGS_R;
+  option.M = 10;
+  option.dsub = option.dim / option.M;
   option.save_path = FLAGS_index_path;
   option.test_file = FLAGS_teat_data_path;
   option.thread_num = FLAGS_thread_num;

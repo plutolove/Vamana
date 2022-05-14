@@ -8,8 +8,10 @@
 #include <cstring>
 #include <fstream>
 #include <ios>
+#include <memory>
 #include <mutex>
 #include <random>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -18,6 +20,7 @@
 #include "fmt/format.h"
 #include "index.h"
 #include "omp.h"
+#include "util/random_split.h"
 
 namespace vamana {
 
@@ -414,6 +417,78 @@ size_t VamanaIndex<T>::load_disk_index(const std::string& path) {
   return 0;
 }
 
-template class VamanaIndex<float>;
+template <typename T>
+void VamanaIndex<T>::gen_pq_index() {
+  auto train_idx = random_split(1.0 * TRAINING_SET_SIZE / option.N, option.N);
+  std::unique_ptr<T[]> train_data =
+      std::make_unique<float[]>(train_idx.size() * option.sdim);
+}
 
+template <typename T>
+void VamanaIndex<T>::kmeans_init_cluster(const std::vector<size_t>& train_idx,
+                                         std::vector<std::vector<float>>& clp,
+                                         size_t n_pts, size_t chunk_id,
+                                         size_t dim, size_t sdim,
+                                         size_t n_cluster) {
+  static DistanceL2<float> distance_calc;
+  for (size_t i = 0; i < n_cluster; i++) {
+    clp[i].resize(sdim);
+  }
+  std::random_device rd;
+  std::mt19937 generator(rd());
+  std::uniform_real_distribution<> weight_dist(0, 1);
+  std::uniform_int_distribution<size_t> int_dist(0, n_pts - 1);
+  size_t init_id = int_dist(generator);
+  auto* ptr = _data + dim * train_idx[init_id] + chunk_id * sdim;
+  std::memcpy(clp[0].data(), ptr, sdim);
+  std::vector<float> dist(n_pts, 0);
+
+  std::unordered_set<size_t> visit{init_id};
+
+#pragma omp parallel for schedule(static, 8192)
+  for (size_t i = 0; i < n_pts; i++) {
+    size_t idx = train_idx[i];
+    dist[i] =
+        distance_calc(_data + idx * dim + sdim * chunk_id, clp[0].data(), sdim);
+  }
+
+  while (visit.size() < n_cluster) {
+    double weight = weight_dist(generator);
+    double sum = 0;
+    for (size_t i = 0; i < n_pts; i++) {
+      sum = sum + dist[i];
+    }
+    weight *= sum;
+    double prefix_sum = 0;
+    size_t idx = 0;
+    for (size_t i = 0; i < n_pts; i++) {
+      idx = i;
+      if (weight >= prefix_sum && weight < prefix_sum + dist[i]) {
+        break;
+      }
+      prefix_sum += dist[i];
+    }
+    if (visit.count(idx) && weight > 0) continue;
+    const auto* ptr = _data + dim * train_idx[idx] + chunk_id * sdim;
+    std::memcpy(clp[visit.size()].data(), ptr, sdim);
+    visit.insert(idx);
+#pragma omp parallel for schedule(static, 8192)
+    for (size_t i = 0; i < n_pts; i++) {
+      size_t id = train_idx[i];
+      dist[i] = distance_calc(_data + id * dim + sdim * chunk_id, ptr, sdim);
+    }
+  }
+}
+
+template <typename T>
+std::vector<std::vector<float>> VamanaIndex<T>::kmeans(
+    const std::vector<size_t>& train_idx, size_t n_pts, size_t chunk_id,
+    size_t dim, size_t sdim, size_t n_cluster) {
+  std::vector<std::vector<float>> ret;
+
+  return ret;
+}
+
+template class VamanaIndex<float>;
+ 
 }  // namespace vamana

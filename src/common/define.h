@@ -12,5 +12,6 @@
 
 const int BLOK_SIZE = 4096;
 const int MAX_EVENTS = 1024;
+const int TRAINING_SET_SIZE = 100000;
 
 using FileHandler = int;

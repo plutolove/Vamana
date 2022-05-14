@@ -111,6 +111,16 @@ class VamanaIndex {
 
   size_t load_disk_index(const std::string& path);
 
+  void gen_pq_index();
+  void kmeans_init_cluster(const std::vector<size_t>& train_idx,
+                           std::vector<std::vector<float>>& clp, size_t n_pts,
+                           size_t chunk_id, size_t dim, size_t sdim,
+                           size_t n_cluster = 256);
+  std::vector<std::vector<float>> kmeans(const std::vector<size_t>& train_idx,
+                                         size_t n_pts, size_t chunk_id,
+                                         size_t dim, size_t sdim,
+                                         size_t n_cluster = 256);
+
   size_t save_index() {
     std::cout << "start save index" << std::endl;
     std::ofstream fout(option.save_path, std::ios::binary);

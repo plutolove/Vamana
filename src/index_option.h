@@ -27,6 +27,12 @@ struct IndexOption {
   float alpha = 1.2;
   std::string file_name;
   std::string save_path;
+
+  // pq
+  size_t M;     // dim % M == 0
+  size_t sdim;  // dim / M
+  static const size_t ksub = 256;
+
   DistanceL2<T> calc;
 };
 
