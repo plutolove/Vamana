@@ -12,6 +12,7 @@
 
 namespace vamana {
 
+// clock 替换算法实现的cache
 template <typename K, typename V>
 class BlockCache : boost::noncopyable {
   static const uint32_t kInCacheBit = 1;
@@ -107,6 +108,7 @@ class BlockCache : boost::noncopyable {
     // 否则说明还有引用
     if (InCache(flags) && CountRefs(flags) == 0) {
       recycleHandle(handle);
+      擦车
       ret = true;
     }
     return ret;
@@ -220,6 +222,7 @@ class BlockCache : boost::noncopyable {
   mutable std::mutex mtx;
 };
 
+// 多路组相连cache
 class SharedBlockCache {
  public:
   SharedBlockCache(size_t shard_num, size_t capacity) : shard_num(shard_num) {
