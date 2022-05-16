@@ -3,6 +3,7 @@
 #include <iostream>
 #include <list>
 #include <memory>
+#include <queue>
 
 #include "block.h"
 #include "common/define.h"
@@ -23,6 +24,7 @@ DEFINE_string(index_path, "../data/index.bin", "index save path");
 DEFINE_string(teat_data_path, "../data/test.bin", "test data path");
 DEFINE_int32(thread_num, 16, "openmp thread num");
 using namespace vamana;
+
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   std::cout << FLAGS_N << std::endl;
