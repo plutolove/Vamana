@@ -19,7 +19,7 @@ BlockReader::BlockReader(const std::string& path)
   assert(fd != -1);
 }
 
-bool BlockReader::read(std::vector<std::shared_ptr<Block>>& blocks) {
+bool BlockReader::read(std::vector<BlockPtr>& blocks) {
   io_context_t ctx = 0;
   if (not io_contexts.pop(ctx)) {
     int ret = io_setup(MAX_EVENTS, &ctx);
@@ -72,7 +72,7 @@ bool BlockReader::read(std::vector<std::shared_ptr<Block>>& blocks) {
   return true;
 }
 
-bool BlockReader::read(std::shared_ptr<Block>& block) {
+bool BlockReader::read(BlockPtr& block) {
   io_context_t ctx = 0;
   if (not io_contexts.pop(ctx)) {
     int ret = io_setup(MAX_EVENTS, &ctx);
@@ -80,6 +80,7 @@ bool BlockReader::read(std::shared_ptr<Block>& block) {
       std::cout << fmt::format("io_setup() error, ret: {}, status: {}", ret,
                                strerror(ret))
                 << std::endl;
+      return false;
     }
   }
 

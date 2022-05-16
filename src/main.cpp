@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include <iostream>
+#include <list>
 #include <memory>
 
 #include "block.h"
@@ -22,7 +23,7 @@ DEFINE_string(index_path, "../data/index.bin", "index save path");
 DEFINE_string(teat_data_path, "../data/test.bin", "test data path");
 DEFINE_int32(thread_num, 16, "openmp thread num");
 using namespace vamana;
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   std::cout << FLAGS_N << std::endl;
   DistanceL2<float> dis;
@@ -38,12 +39,12 @@ int main(int argc, char **argv) {
   option.thread_num = FLAGS_thread_num;
   option.test_N = 20000;
   VamanaIndex<float> index(option);
-  index.build();
-  index.save_disk_index("../data/disk_index.bin");
-  // index.load_disk_index("../data/disk_index.bin");
-  // index.save_index();
-  // index.load_index();
-  // index.test();
+  // index.build();
+  // index.save_disk_index("../data/disk_index.bin");
+  //  index.load_disk_index("../data/disk_index.bin");
+  //  index.save_index();
+  //  index.load_index();
+  //  index.test();
 
   DiskIndex<float> dindex("../data/disk_index.bin");
   return 0;

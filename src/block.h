@@ -2,7 +2,6 @@
 #include <libaio.h>
 
 #include <atomic>
-#include <boost/align/detail/aligned_alloc_posix.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -73,9 +72,9 @@ class BlockReader : boost::noncopyable {
   }
 
   // 读取多个block
-  bool read(std::vector<std::shared_ptr<Block>>& blocks);
+  bool read(std::vector<BlockPtr>& blocks);
   // 读取一个block
-  bool read(std::shared_ptr<Block>& block);
+  bool read(BlockPtr& block);
 
  protected:
   uint64_t file_sz;

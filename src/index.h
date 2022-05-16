@@ -239,4 +239,6 @@ class VamanaIndex {
   IndexOption<T> option;
 };
 
+extern template class VamanaIndex<float>;
+
 }  // namespace vamana

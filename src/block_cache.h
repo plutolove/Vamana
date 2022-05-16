@@ -1,5 +1,6 @@
 #pragma once
 #include "block.h"
+#include "block_pool.h"
 #include "folly/concurrency/ConcurrentHashMap.h"
 
 namespace vamana {
