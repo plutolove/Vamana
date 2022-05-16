@@ -26,6 +26,8 @@ class BlockPool : boost::noncopyable {
 
   ~BlockPool() { block_list.clear(); }
 
+  inline void recycle(BlockPtr ptr) { pool.push(ptr); }
+
   inline BlockPtr getSingleBlockPtr() {
     BlockPtr ret = nullptr;
     // 如果pool里面没有可用的block，则新建一个
