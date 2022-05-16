@@ -42,11 +42,10 @@ struct Block : boost::noncopyable {
     return size;
   }
 
-  char* data = nullptr;
   size_t start;
   size_t len;
+  char* data = nullptr;
   size_t idx;
-  std::atomic_int ref_cnt{0};
 };
 
 using BlockPtr = Block*;

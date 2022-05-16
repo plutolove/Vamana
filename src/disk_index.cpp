@@ -35,14 +35,14 @@ DiskIndex<T>::DiskIndex(const std::string& path) : path(path), reader(path) {
 }
 
 template <typename T>
-std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L) {
+std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
+                                          size_t width) {
   std::vector<int32_t> ret;
   std::priority_queue<Node> q;
   std::set<Node> topL;
   std::unordered_set<int32_t> visit;
 
   auto& block_pool = BlockPool::getInstance();
-  const size_t W = 2;
 
   while (not q.empty()) {
     Node top = q.top();
@@ -56,7 +56,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L) {
 
       std::vector<BlockPtr> cached_blocks;
       std::vector<int32_t> cached_idx;
-      while (uncached_blocks.size() < W && idx < top.neighbors.size()) {
+      while (uncached_blocks.size() < width && idx < top.neighbors.size()) {
         // if block cache get block
         // cached_blocks push_back
 
@@ -68,7 +68,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L) {
       reader.read(uncached_blocks);
       // process cached
       // process uncached block
-      
+
       // if (topL.size() == L &&)
     }
   }

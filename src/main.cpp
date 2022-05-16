@@ -1,11 +1,14 @@
 #include <string.h>
 
+#include <cassert>
 #include <iostream>
 #include <list>
 #include <memory>
 #include <queue>
 
 #include "block.h"
+#include "block_cache.h"
+#include "block_pool.h"
 #include "common/define.h"
 #include "common/exception.h"
 #include "disk_index.h"
@@ -49,5 +52,16 @@ int main(int argc, char** argv) {
   //  index.test();
 
   DiskIndex<float> dindex("../data/disk_index.bin");
+  BlockCache<int32_t, BlockPtr> cache(1024);
+  auto block_ptr = BlockPool::getInstance().getSingleBlockPtr();
+  SharedBlockCache scache(8, 1024);
+  scache.insert(0, block_ptr);
+  auto ret = scache.find(0);
+  if (ret)
+    assert(int64_t(ret->value) == int64_t(block_ptr));
+  else
+    std::cout << "ret is nullptr" << std::endl;
+  scache.erase(0);
+
   return 0;
 }

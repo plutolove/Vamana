@@ -27,7 +27,7 @@ class DiskIndex : boost::noncopyable {
 
   inline int32_t block_id(size_t idx) { return idx / num_per_block + 1; }
 
-  std::vector<int32_t> search(T* query, size_t K, size_t L);
+  std::vector<int32_t> search(T* query, size_t K, size_t L, size_t width);
 
  protected:
   std::string path;
