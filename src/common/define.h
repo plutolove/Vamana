@@ -10,7 +10,7 @@
 
 #define ROUND_DOWN(X, Y) (((uint64_t)(X) / (Y)) * (Y))
 
-const int BLOK_SIZE = 4096;
+const int BLOCK_SIZE = 4096;
 const int MAX_EVENTS = 1024;
 
 using FileHandler = int;

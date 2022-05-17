@@ -19,10 +19,10 @@ namespace vamana {
 struct Block : boost::noncopyable {
   Block()
       : start(-1),
-        len(BLOK_SIZE),
-        data(reinterpret_cast<char*>(std::aligned_alloc(512, BLOK_SIZE))) {}
+        len(BLOCK_SIZE),
+        data(reinterpret_cast<char*>(std::aligned_alloc(512, BLOCK_SIZE))) {}
   Block(size_t start, size_t len) : start(start), len(len) {
-    data = reinterpret_cast<char*>(std::aligned_alloc(512, BLOK_SIZE));
+    data = reinterpret_cast<char*>(std::aligned_alloc(512, BLOCK_SIZE));
   }
 
   ~Block() {

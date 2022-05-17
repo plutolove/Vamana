@@ -46,22 +46,12 @@ int main(int argc, char** argv) {
   VamanaIndex<float> index(option);
   // index.build();
   // index.save_disk_index("../data/disk_index.bin");
-  //  index.load_disk_index("../data/disk_index.bin");
-  //  index.save_index();
-  //  index.load_index();
-  //  index.test();
+  // index.load_disk_index("../data/disk_index.bin");
+  // index.save_index();
+  // index.load_index();
+  // index.test();
 
-  DiskIndex<float> dindex("../data/disk_index.bin");
-  BlockCache<int32_t, BlockPtr> cache(1024);
-  auto block_ptr = BlockPool::getInstance().getSingleBlockPtr();
-  SharedBlockCache scache(8, 1024);
-  scache.insert(0, block_ptr);
-  auto ret = scache.find(0);
-  if (ret)
-    assert(int64_t(ret->value) == int64_t(block_ptr));
-  else
-    std::cout << "ret is nullptr" << std::endl;
-  scache.erase(0);
+  DiskIndex<float> dindex("../data/disk_index.bin", 8, 1024);
 
   return 0;
 }

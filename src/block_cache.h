@@ -108,7 +108,6 @@ class BlockCache : boost::noncopyable {
     // 否则说明还有引用
     if (InCache(flags) && CountRefs(flags) == 0) {
       recycleHandle(handle);
-      擦车
       ret = true;
     }
     return ret;
@@ -178,17 +177,14 @@ class BlockCache : boost::noncopyable {
   CacheHandle* find(K key, uint32_t hash) {
     auto iter = cache_.find(key);
     if (iter == cache_.end()) {
-      std::cout << "------------\n";
       return nullptr;
     }
     auto* handle = iter->second;
     if (!Ref(handle)) {
-      std::cout << "------------||||||||\n";
       return nullptr;
     }
 
     if (hash != handle->hash || key != handle->key) {
-      std::cout << "------------000000\n";
       Unref(handle);
       return nullptr;
     }
@@ -225,8 +221,9 @@ class BlockCache : boost::noncopyable {
 // 多路组相连cache
 class SharedBlockCache {
  public:
-  SharedBlockCache(size_t shard_num, size_t capacity) : shard_num(shard_num) {
-    // shard_num = 2^x
+  SharedBlockCache(size_t shard_num, size_t capacity)
+      : shard_num(shard_num), mask(shard_num - 1) {
+    // shard_num = 2^n
     assert(((shard_num) & (shard_num - 1)) == 0);
     shared_cache.reserve(shard_num);
     for (size_t i = 0; i < shard_num; i++) {
@@ -240,22 +237,23 @@ class SharedBlockCache {
   }
 
   bool insert(int32_t key, BlockPtr value) {
-    uint32_t hash = key & shard_num;
+    uint32_t hash = key & mask;
     return shared_cache[hash]->insert(key, value, hash);
   }
 
   BlockCache<int32_t, BlockPtr>::CacheHandle* find(int32_t key) {
-    uint32_t hash = key & shard_num;
+    uint32_t hash = key & mask;
     return shared_cache[hash]->find(key, hash);
   }
 
   bool erase(int32_t key) {
-    uint32_t hash = key & shard_num;
+    uint32_t hash = key & mask;
     return shared_cache[hash]->erase(key, hash);
   }
 
  protected:
   size_t shard_num;
+  size_t mask;
   std::vector<BlockCache<int32_t, BlockPtr>*> shared_cache;
 };
 

@@ -327,8 +327,8 @@ size_t VamanaIndex<T>::save_disk_index(const std::string& path) {
   */
   std::ofstream fout(path, std::ios_base::binary);
   // 4k per block
-  char block[BLOK_SIZE];
-  int neighbors[200];
+  char block[BLOCK_SIZE];
+  int32_t neighbors[200];
   // write the number of point(size_t), dim(size_t), centroid_idx(size_t)
   int offset = 0;
   memset(block, -1, sizeof(block));
@@ -344,10 +344,10 @@ size_t VamanaIndex<T>::save_disk_index(const std::string& path) {
 
   memcpy(block + offset, &option.centroid_idx, sizeof(option.centroid_idx));
 
-  fout.write(block, sizeof(char) * BLOK_SIZE);
+  fout.write(block, sizeof(char) * BLOCK_SIZE);
 
   size_t num_per_block =
-      BLOK_SIZE / (sizeof(T) * option.dim + sizeof(int32_t) * (option.R + 1));
+      BLOCK_SIZE / (sizeof(T) * option.dim + sizeof(int32_t) * (option.R + 1));
 
   size_t block_num = ROUND_UP(option.N, num_per_block);
   size_t idx = 0;
@@ -359,7 +359,7 @@ size_t VamanaIndex<T>::save_disk_index(const std::string& path) {
       // 将embedding保存到raw_data
       raw_data.append(reinterpret_cast<const char*>(vec_ptr[idx]),
                       sizeof(T) * option.dim);
-      int32_t num_neighbors = _graph.size();
+      int32_t num_neighbors = _graph[idx].size();
       raw_data.append(reinterpret_cast<char*>(&num_neighbors), sizeof(int32_t));
       // neighbors 按R保存，不够的补-1
       memset(neighbors, -1, sizeof(neighbors));
@@ -373,9 +373,9 @@ size_t VamanaIndex<T>::save_disk_index(const std::string& path) {
 
       idx++;
     }
-    memcpy(block, raw_data.data(), BLOK_SIZE);
+    memcpy(block, raw_data.data(), raw_data.size());
     // 一整个block写入
-    fout.write(block, BLOK_SIZE);
+    fout.write(block, BLOCK_SIZE);
   }
   fout.close();
   return 0;
@@ -385,8 +385,8 @@ template <typename T>
 size_t VamanaIndex<T>::load_disk_index(const std::string& path) {
   std::ifstream fin(path, std::ios_base::binary);
 
-  char block[BLOK_SIZE];
-  fin.read(block, BLOK_SIZE);
+  char block[BLOCK_SIZE];
+  fin.read(block, BLOCK_SIZE);
   size_t N, dim, R, centroid_idx;
   size_t offset = 0;
   memcpy(&N, block, sizeof(N));
@@ -399,16 +399,20 @@ size_t VamanaIndex<T>::load_disk_index(const std::string& path) {
   std::cout << fmt::format("n:{}, dim:{}, r:{}, idx:{}\n", N, dim, R,
                            centroid_idx);
   size_t num_per_block =
-      BLOK_SIZE / (sizeof(T) * option.dim + sizeof(int32_t) * (option.R + 1));
+      BLOCK_SIZE / (sizeof(T) * option.dim + sizeof(int32_t) * (option.R + 1));
 
   size_t block_num = ROUND_UP(option.N, num_per_block);
   size_t idx = 0;
+
   for (size_t block_id = 0; block_id < block_num; ++block_id) {
-    fin.read(block, BLOK_SIZE);
+    fin.read(block, BLOCK_SIZE);
     auto* ptr = reinterpret_cast<T*>(block);
     for (size_t i = 0; i < dim; i++) {
-      // std::cout << ptr[i] << std::endl;
+      std::cout << ptr[i] << std::endl;
+      break;
     }
+    auto* num = reinterpret_cast<int32_t*>(block + sizeof(T) * dim);
+    std::cout << "num: " << *num << std::endl;
     break;
   }
   return 0;
