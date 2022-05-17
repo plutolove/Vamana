@@ -48,6 +48,7 @@ DiskIndex<T>::DiskIndex(const std::string& path, size_t cache_shard_num,
 template <typename T>
 void DiskIndex<T>::init_static_cache() {
   std::queue<std::pair<int32_t, size_t>> q;
+  std::unordered_set<int32_t> visit{int32_t(centroid_idx)};
   q.push(std::make_pair(int32_t(centroid_idx), 0));
   while (not q.empty()) {
     auto head = q.front();
@@ -84,7 +85,8 @@ void DiskIndex<T>::init_static_cache() {
 
     for (int32_t i = 0; i < num_neighbors; i++) {
       auto it = static_cache.find(neighbors[i]);
-      if (it != static_cache.end()) continue;
+      if (visit.count(neighbors[i])) continue;
+      visit.insert(neighbors[i]);
       q.push(std::make_pair(neighbors[i], head.second + 1));
     }
   }
