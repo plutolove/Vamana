@@ -26,7 +26,7 @@ class DiskIndex : boost::noncopyable {
 
   DiskIndex(const std::string& path, size_t cache_shard_num, size_t cap);
 
-  void init_static_cache();
+  void init_static_cache(size_t hop);
 
   inline size_t block_id(size_t idx) { return idx / num_per_block + 1; }
 

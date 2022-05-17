@@ -221,6 +221,8 @@ class BlockCache : boost::noncopyable {
 // 多路组相连cache
 class SharedBlockCache {
  public:
+  using CacheHandle = BlockCache<int32_t, BlockPtr>::CacheHandle;
+
   SharedBlockCache(size_t shard_num, size_t capacity)
       : shard_num(shard_num), mask(shard_num - 1) {
     // shard_num = 2^n
@@ -241,7 +243,7 @@ class SharedBlockCache {
     return shared_cache[hash]->insert(key, value, hash);
   }
 
-  BlockCache<int32_t, BlockPtr>::CacheHandle* find(int32_t key) {
+  CacheHandle* find(int32_t key) {
     uint32_t hash = key & mask;
     return shared_cache[hash]->find(key, hash);
   }
@@ -249,6 +251,11 @@ class SharedBlockCache {
   bool erase(int32_t key) {
     uint32_t hash = key & mask;
     return shared_cache[hash]->erase(key, hash);
+  }
+
+  bool unref(CacheHandle* handle) {
+    int32_t hash = handle->key & mask;
+    return shared_cache[hash]->Unref(handle);
   }
 
  protected:

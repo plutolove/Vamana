@@ -1,5 +1,6 @@
 #include <fmt/core.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <queue>
 #include <set>
@@ -43,10 +44,10 @@ DiskIndex<T>::DiskIndex(const std::string& path, size_t cache_shard_num,
       N, dim, R, centroid_idx, num_per_block, size_per_record);
 
   // 起点开始3跳的block cache到static_cache
-  init_static_cache();
+  init_static_cache(3);
 }
 template <typename T>
-void DiskIndex<T>::init_static_cache() {
+void DiskIndex<T>::init_static_cache(size_t hop) {
   std::queue<std::pair<int32_t, size_t>> q;
   std::unordered_set<int32_t> visit{int32_t(centroid_idx)};
   q.push(std::make_pair(int32_t(centroid_idx), 0));
@@ -55,7 +56,7 @@ void DiskIndex<T>::init_static_cache() {
     q.pop();
 
     // 只保存三跳的block
-    if (head.second >= 3) continue;
+    if (head.second > hop) continue;
 
     auto iter = static_cache.find(head.first);
     BlockPtr cur_block = nullptr;
@@ -85,7 +86,7 @@ void DiskIndex<T>::init_static_cache() {
 
     for (int32_t i = 0; i < num_neighbors; i++) {
       auto it = static_cache.find(neighbors[i]);
-      if (visit.count(neighbors[i])) continue;
+      if (visit.count(neighbors[i]) || head.second + 1 > hop) continue;
       visit.insert(neighbors[i]);
       q.push(std::make_pair(neighbors[i], head.second + 1));
     }
