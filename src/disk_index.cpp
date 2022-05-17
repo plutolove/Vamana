@@ -218,6 +218,13 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
   for (auto& handle : handles) {
     clock_cache->release(handle);
   }
+  ret.reserve(K);
+  auto iter = topL.begin();
+  while (K--) {
+    if (iter == topL.end()) break;
+    ret.emplace_back(iter->idx);
+    iter++;
+  }
   return ret;
 }
 
