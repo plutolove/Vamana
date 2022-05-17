@@ -1,4 +1,5 @@
 #include <fmt/core.h>
+#include <libaio.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -104,14 +105,19 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
   std::set<Node> topL;
   std::unordered_set<int32_t> visit;
 
-  auto& block_pool = BlockPool::getInstance();
+  static auto& block_pool = BlockPool::getInstance();
+
+  std::vector<SharedBlockCache::CacheHandle*> handles;
 
   while (not q.empty()) {
     Node top = q.top();
     q.pop();
     size_t idx = 0;
     while (idx < top.neighbors.size()) {
-      if (visit.count(top.neighbors[idx])) continue;
+      if (visit.count(top.neighbors[idx])) {
+        idx++;
+        continue;
+      }
 
       std::vector<BlockPtr> uncached_blocks;
       std::vector<int32_t> uncached_idx;
@@ -119,20 +125,98 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
       std::vector<BlockPtr> cached_blocks;
       std::vector<int32_t> cached_idx;
       while (uncached_blocks.size() < width && idx < top.neighbors.size()) {
+        auto block_idx = block_id(top.neighbors[idx]);
         // if block cache get block
         // cached_blocks push_back
-
-        // else
-        // uncached_blocks push_back
+        // 3跳的cache
+        auto iter = static_cache.find(block_idx);
+        if (iter != static_cache.end()) {
+          cached_idx.emplace_back(top.neighbors[idx]);
+          cached_blocks.emplace_back(iter->second);
+          idx++;
+          continue;
+        }
+        // block cache
+        auto handle = clock_cache->find(block_idx);
+        if (handle) {
+          cached_idx.emplace_back(top.neighbors[idx]);
+          cached_blocks.emplace_back(handle->value);
+          handles.emplace_back(handle);
+          idx++;
+          continue;
+        }
+        // uncached_blocks
+        auto new_block = block_pool.getSingleBlockPtr();
+        new_block->idx = block_idx;
+        new_block->start = block_offset(top.neighbors[idx]);
+        new_block->len = BLOCK_SIZE;
+        uncached_blocks.emplace_back(new_block);
+        uncached_idx.emplace_back(top.neighbors[idx]);
         idx++;
       }
       // async read uncached block
       reader.read(uncached_blocks);
       // process cached
-      // process uncached block
+      for (size_t i = 0; i < cached_idx.size(); i++) {
+        auto id = cached_idx[i];
+        auto* cur_block = cached_blocks[i];
+        if (visit.count(id)) continue;
+        auto* vec_ptr = cur_block->getPtr<float>(vec_offset(id));
+        T dist = calc(query, vec_ptr, dim);
+        if (topL.size() == L && dist >= topL.rbegin()->dist) continue;
+        int32_t num_neighbors =
+            cur_block->getNeighborSize(num_neighbors_offset(id));
 
-      // if (topL.size() == L &&)
+        int32_t* neighbors = cur_block->getPtr<int32_t>(neighbors_offset(id));
+        // 构造node
+        Node nd;
+        nd.idx = id;
+        nd.dist = dist;
+        nd.neighbors.resize(num_neighbors);
+        std::memcpy(nd.neighbors.data(), neighbors,
+                    sizeof(int32_t) * num_neighbors);
+        q.push(nd);
+        topL.insert(nd);
+        if (topL.size() > L) {
+          auto iter = topL.rbegin();
+          topL.erase(*iter);
+        }
+      }
+
+      // process uncached block
+      for (size_t i = 0; i < uncached_idx.size(); i++) {
+        auto id = uncached_idx[i];
+        auto* cur_block = uncached_blocks[i];
+        if (visit.count(id)) continue;
+        auto* vec_ptr = cur_block->getPtr<float>(vec_offset(id));
+        T dist = calc(query, vec_ptr, dim);
+        // 距离大于等于topL中最大的则跳过
+        if (topL.size() == L && dist >= topL.rbegin()->dist) continue;
+        int32_t num_neighbors =
+            cur_block->getNeighborSize(num_neighbors_offset(id));
+
+        int32_t* neighbors = cur_block->getPtr<int32_t>(neighbors_offset(id));
+        // 构造node
+        Node nd;
+        nd.idx = id;
+        nd.dist = dist;
+        nd.neighbors.resize(num_neighbors);
+        std::memcpy(nd.neighbors.data(), neighbors,
+                    sizeof(int32_t) * num_neighbors);
+        q.push(nd);
+        topL.insert(nd);
+        // insert 到block cache
+        clock_cache->insert(cur_block->idx, cur_block);
+        if (topL.size() > L) {
+          auto iter = topL.rbegin();
+          topL.erase(*iter);
+        }
+      }
     }
+  }
+  // 释放block cache
+  for (auto& handle : handles) {
+    clock_cache->release(handle);
   }
   return ret;
 }

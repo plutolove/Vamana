@@ -40,7 +40,7 @@ class BlockCache : boost::noncopyable {
     std::atomic<uint32_t> flags;
   };
 
-  BlockCache(size_t cap) : capacity(cap), cache_(cap) {}
+  BlockCache(size_t cap) : capacity(cap), cache_(cap), head_(0) {}
   ~BlockCache() {
     std::cout << "release block cache" << std::endl;
     list_.clear();
