@@ -12,14 +12,14 @@
 
 namespace vamana {
 
+const uint32_t kInCacheBit = 1;
+const uint32_t kUsageBit = 2;
+const uint32_t kRefsOffset = 2;
+const uint32_t kOneRef = 1 << kRefsOffset;
+
 // clock 替换算法实现的cache
 template <typename K, typename V>
 class BlockCache : boost::noncopyable {
-  static const uint32_t kInCacheBit = 1;
-  static const uint32_t kUsageBit = 2;
-  static const uint32_t kRefsOffset = 2;
-  static const uint32_t kOneRef = 1 << kRefsOffset;
-
  public:
   struct CacheHandle {
     CacheHandle() = default;
@@ -253,8 +253,10 @@ class SharedBlockCache {
     return shared_cache[hash]->erase(key, hash);
   }
 
-  bool unref(CacheHandle* handle) {
+  bool release(CacheHandle* handle) {
     int32_t hash = handle->key & mask;
+    // 设置usage位，表示cache命中过
+    handle->flags.fetch_or(kUsageBit, std::memory_order_relaxed);
     return shared_cache[hash]->Unref(handle);
   }
 

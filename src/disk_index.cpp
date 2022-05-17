@@ -46,6 +46,7 @@ DiskIndex<T>::DiskIndex(const std::string& path, size_t cache_shard_num,
   // 起点开始3跳的block cache到static_cache
   init_static_cache(3);
 }
+
 template <typename T>
 void DiskIndex<T>::init_static_cache(size_t hop) {
   std::queue<std::pair<int32_t, size_t>> q;
@@ -55,7 +56,7 @@ void DiskIndex<T>::init_static_cache(size_t hop) {
     auto head = q.front();
     q.pop();
 
-    // 只保存三跳的block
+    // 只保存hop的block
     if (head.second > hop) continue;
 
     auto iter = static_cache.find(head.first);
