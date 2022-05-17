@@ -90,6 +90,8 @@ void DiskIndex<T>::init_static_cache() {
       q.push(std::make_pair(neighbors[i], head.second + 1));
     }
   }
+  std::cout << fmt::format("visit node size: {}, cache block size: {}\n",
+                           visit.size(), static_cache.size());
 }
 
 template <typename T>
