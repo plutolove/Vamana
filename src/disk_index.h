@@ -18,9 +18,13 @@ template <typename T>
 class DiskIndex : boost::noncopyable {
  public:
   struct Node {
-    int32_t idx;
-    float dist;
-    std::vector<int32_t> neighbors;
+    int32_t idx = -1;
+    float dist = 0;
+    size_t num_neighbors = 0;
+    int32_t* neighbors = nullptr;
+    Node() {}
+    Node(int32_t idx, float dist, size_t num, int32_t* neig)
+        : idx(idx), dist(dist), num_neighbors(num), neighbors(neig) {}
     bool operator<(const Node& right) const { return dist > right.dist; }
   };
 
@@ -43,6 +47,26 @@ class DiskIndex : boost::noncopyable {
   inline size_t neighbors_offset(size_t idx) {
     return idx % num_per_block * size_per_record + sizeof(T) * dim +
            sizeof(int32_t);
+  }
+
+  Node genStartNode(T* query) {
+    // 质心的block id
+    static size_t start_block_id = block_id(centroid_idx);
+    // 质心的block肯定在static cache中
+    static BlockPtr start_block_ptr = static_cache[start_block_id];
+    // 质心对应的vec ptr
+    static auto* start_vec_ptr =
+        start_block_ptr->getPtr<float>(vec_offset(centroid_idx));
+    // 质心的num neighbors
+    static int32_t start_num_neighbors =
+        start_block_ptr->getNeighborSize(num_neighbors_offset(centroid_idx));
+    // 质心的neighbors
+    static int32_t* start_neighbors =
+        start_block_ptr->getPtr<int32_t>(neighbors_offset(start_block_id));
+    // 质心到query的距离
+    float dist = calc(query, start_vec_ptr, dim);
+    Node nd(centroid_idx, dist, start_num_neighbors, start_neighbors);
+    return nd;
   }
 
   std::vector<int32_t> search(T* query, size_t K, size_t L, size_t width);
