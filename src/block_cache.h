@@ -47,7 +47,7 @@ class BlockCache : boost::noncopyable {
   static bool HasUsage(uint32_t flags) { return flags & kUsageBit; }
   static uint32_t CountRefs(uint32_t flags) { return flags >> kRefsOffset; }
 
-  void recycleHandle(CacheHandle* handle) {
+  inline void recycleHandle(CacheHandle* handle) {
     static auto& pool = POOL::getInstance();
     // 回收block
     pool.recycle(handle->value);
@@ -58,7 +58,7 @@ class BlockCache : boost::noncopyable {
     size_.fetch_sub(1, std::memory_order_relaxed);
   }
 
-  bool try_make_room(CacheHandle* handle) {
+  inline bool try_make_room(CacheHandle* handle) {
     uint32_t flags = kInCacheBit;
     // 如果flags == kInCacheBit，表示没有引用，则flags设置为0,回收handle
     if (handle->flags.compare_exchange_strong(
@@ -98,7 +98,7 @@ class BlockCache : boost::noncopyable {
     return true;
   }
 
-  bool UnsetInCache(CacheHandle* handle) {
+  inline bool UnsetInCache(CacheHandle* handle) {
     bool ret = false;
     uint32_t flags =
         handle->flags.fetch_and(~kInCacheBit, std::memory_order_acq_rel);
@@ -111,7 +111,7 @@ class BlockCache : boost::noncopyable {
     return ret;
   }
 
-  bool Ref(CacheHandle* h) {
+  inline bool Ref(CacheHandle* h) {
     auto handle = reinterpret_cast<CacheHandle*>(h);
     // CAS loop to increase reference count.
     uint32_t flags = handle->flags.load(std::memory_order_relaxed);
@@ -125,10 +125,7 @@ class BlockCache : boost::noncopyable {
     return false;
   }
 
-  bool Unref(CacheHandle* handle, bool set_usage = false) {
-    if (set_usage) {
-      handle->flags.fetch_or(kUsageBit, std::memory_order_relaxed);
-    }
+  inline bool Unref(CacheHandle* handle) {
     bool ret = false;
     uint32_t flags =
         handle->flags.fetch_sub(kOneRef, std::memory_order_acq_rel);
@@ -144,9 +141,10 @@ class BlockCache : boost::noncopyable {
     return ret;
   }
 
-  bool Release(CacheHandle* handle) {
+  inline bool Release(CacheHandle* handle) {
     // 设置usage位，表示cache命中过
-    return Unref(handle, true);
+    handle->flags.fetch_or(kUsageBit, std::memory_order_relaxed);
+    return Unref(handle);
   }
 
   bool insert(K key, V value, uint32_t hash) {
@@ -245,22 +243,22 @@ class SharedBlockCache {
     }
   }
 
-  bool insert(int32_t key, BlockPtr value) {
+  inline bool insert(int32_t key, BlockPtr value) {
     uint32_t hash = key & mask;
     return shared_cache[hash]->insert(key, value, hash);
   }
 
-  CacheHandle* find(int32_t key) {
+  inline CacheHandle* find(int32_t key) {
     uint32_t hash = key & mask;
     return shared_cache[hash]->find(key, hash);
   }
 
-  bool erase(int32_t key) {
+  inline bool erase(int32_t key) {
     uint32_t hash = key & mask;
     return shared_cache[hash]->erase(key, hash);
   }
 
-  bool release(CacheHandle* handle) {
+  inline bool release(CacheHandle* handle) {
     int32_t hash = handle->key & mask;
     return shared_cache[hash]->Release(handle);
   }
