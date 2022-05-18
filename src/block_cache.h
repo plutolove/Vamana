@@ -147,6 +147,12 @@ class BlockCache : boost::noncopyable {
     return ret;
   }
 
+  bool Release(CacheHandle* handle) {
+    // 设置usage位，表示cache命中过
+    handle->flags.fetch_or(kUsageBit, std::memory_order_relaxed);
+    return Unref(handle);
+  }
+
   bool insert(K key, V value, uint32_t hash) {
     std::lock_guard lock(mtx);
     if (not make_room()) {
@@ -263,8 +269,7 @@ class SharedBlockCache {
   bool release(CacheHandle* handle) {
     int32_t hash = handle->key & mask;
     // 设置usage位，表示cache命中过
-    handle->flags.fetch_or(kUsageBit, std::memory_order_relaxed);
-    return shared_cache[hash]->Unref(handle);
+    return shared_cache[hash]->Release(handle);
   }
 
  protected:
