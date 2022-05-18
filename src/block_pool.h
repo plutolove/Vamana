@@ -12,12 +12,12 @@ namespace vamana {
 class BlockPool : boost::noncopyable {
  public:
   static BlockPool& getInstance() {
-    static BlockPool instance(1024);
+    static BlockPool instance(1024 * 8);
     return instance;
   }
 
   // 初始化size大小的pool
-  BlockPool(size_t size) : pool(4096) {
+  BlockPool(size_t size) : pool(size) {
     while (size--) {
       block_list.emplace_back();
       pool.push(&block_list.back());

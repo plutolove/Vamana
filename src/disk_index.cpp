@@ -227,8 +227,10 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
         topL.insert(nd);
         // 标记访问过
         visit.insert(id);
-        // insert 到block cache
-        clock_cache->insert(cur_block->idx, cur_block);
+        // insert 到block cache，如果insert cache失败则直接回收block
+        if (not clock_cache->insert(cur_block->idx, cur_block)) {
+          block_pool.recycle(cur_block);
+        }
         if (topL.size() > L) {
           auto iter = topL.rbegin();
           topL.erase(*iter);

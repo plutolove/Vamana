@@ -21,10 +21,13 @@ class DiskIndex : boost::noncopyable {
     int32_t idx = -1;
     float dist = 0;
     size_t num_neighbors = 0;
-    int32_t* neighbors = nullptr;
+    std::vector<int32_t> neighbors;
     Node() {}
     Node(int32_t idx, float dist, size_t num, int32_t* neig)
-        : idx(idx), dist(dist), num_neighbors(num), neighbors(neig) {}
+        : idx(idx), dist(dist), num_neighbors(num) {
+      neighbors.resize(num_neighbors);
+      std::memcpy(neighbors.data(), neig, sizeof(int32_t) * num_neighbors);
+    }
     bool operator<(const Node& right) const { return dist > right.dist; }
   };
 
