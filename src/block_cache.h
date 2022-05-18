@@ -18,7 +18,7 @@ const uint32_t kRefsOffset = 2;
 const uint32_t kOneRef = 1 << kRefsOffset;
 
 // clock 替换算法实现的cache
-template <typename K, typename V>
+template <typename K, typename V, typename POOL>
 class BlockCache : boost::noncopyable {
  public:
   struct CacheHandle {
@@ -51,7 +51,8 @@ class BlockCache : boost::noncopyable {
   static uint32_t CountRefs(uint32_t flags) { return flags >> kRefsOffset; }
 
   void recycleHandle(CacheHandle* handle) {
-    static auto& pool = BlockPool::getInstance();
+    std::cout << fmt::format("recycle key: {}\n", handle->key);
+    static auto& pool = POOL::getInstance();
     // 回收block
     pool.recycle(handle->value);
     handle->value = nullptr;
@@ -68,10 +69,12 @@ class BlockCache : boost::noncopyable {
             flags, 0, std::memory_order_acquire, std::memory_order_relaxed)) {
       cache_.erase(handle->key);
       recycleHandle(handle);
+      std::cout << "try make room success\n";
       return true;
     }
     // usage 置0
     handle->flags.fetch_and(~kUsageBit, std::memory_order_relaxed);
+    std::cout << "try make room failed\n";
     return false;
   }
 
@@ -82,7 +85,7 @@ class BlockCache : boost::noncopyable {
     size_t new_head = head_;
     bool second_iter = false;
     if (size >= cap) {
-      while (size_ >= capacity) {
+      while (size >= cap) {
         if (try_make_room(&list_[new_head])) {
           size = size_.load(std::memory_order_relaxed);
         }
@@ -147,6 +150,7 @@ class BlockCache : boost::noncopyable {
   bool insert(K key, V value, uint32_t hash) {
     std::lock_guard lock(mtx);
     if (not make_room()) {
+      std::cout << "make room failed\n";
       return false;
     }
     CacheHandle* handle = nullptr;
@@ -162,16 +166,17 @@ class BlockCache : boost::noncopyable {
     handle->key = key;
     handle->hash = hash;
     handle->value = value;
-    uint32_t flags = kInCacheBit + kOneRef;
+    uint32_t flags = kInCacheBit;
     handle->flags.store(flags, std::memory_order_relaxed);
     auto iter = cache_.find(key);
     // 如果cache中存在，则对handle设置not in cahce
     if (iter != cache_.end()) {
-      cache_.erase(iter);
       UnsetInCache(iter->second);
+      cache_.erase(iter);
     }
     cache_.insert(key, handle);
     size_.fetch_add(1, std::memory_order_relaxed);
+    std::cout << "insert success" << std::endl;
     return true;
   }
 
@@ -222,7 +227,7 @@ class BlockCache : boost::noncopyable {
 // 多路组相连cache
 class SharedBlockCache {
  public:
-  using CacheHandle = BlockCache<int32_t, BlockPtr>::CacheHandle;
+  using CacheHandle = BlockCache<int32_t, BlockPtr, BlockPool>::CacheHandle;
 
   SharedBlockCache(size_t shard_num, size_t capacity)
       : shard_num(shard_num), mask(shard_num - 1) {
@@ -230,7 +235,8 @@ class SharedBlockCache {
     assert(((shard_num) & (shard_num - 1)) == 0);
     shared_cache.reserve(shard_num);
     for (size_t i = 0; i < shard_num; i++) {
-      shared_cache.emplace_back(new BlockCache<int32_t, BlockPtr>(capacity));
+      shared_cache.emplace_back(
+          new BlockCache<int32_t, BlockPtr, BlockPool>(capacity));
     }
   }
   ~SharedBlockCache() {
@@ -264,7 +270,7 @@ class SharedBlockCache {
  protected:
   size_t shard_num;
   size_t mask;
-  std::vector<BlockCache<int32_t, BlockPtr>*> shared_cache;
+  std::vector<BlockCache<int32_t, BlockPtr, BlockPool>*> shared_cache;
 };
 
 }  // namespace vamana
