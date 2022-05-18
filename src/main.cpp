@@ -5,6 +5,7 @@
 #include <list>
 #include <memory>
 #include <queue>
+#include <random>
 
 #include "block.h"
 #include "block_cache.h"

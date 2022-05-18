@@ -18,6 +18,10 @@ find_package(Boost REQUIRED)
 find_library(JemallocLib jemalloc)
 find_package(gflags REQUIRED)
 
+add_subdirectory(${CMAKE_SOURCE_DIR}/deps/googletest)
+include_directories(${CMAKE_SOURCE_DIR}/deps/googletest/googletest/include)
+set(GTEST_LIB gtest gtest_main)
+
 include_directories(${CMAKE_SOURCE_DIR}/src/)
 
 file(GLOB_RECURSE SRC ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/*/*.cpp)
@@ -29,3 +33,8 @@ target_compile_options(Vamana PRIVATE -mavx2 -mavx -msse -msse2 -fPIC -fopenmp -
 add_executable(gen_data ${CMAKE_SOURCE_DIR}/tools/gen_data.cpp)
 add_executable(read_data ${CMAKE_SOURCE_DIR}/tools/read_data.cpp)
 add_executable(split_data ${CMAKE_SOURCE_DIR}/tools/split_data.cpp)
+
+# test
+add_executable(test_cache ${CMAKE_SOURCE_DIR}/test/test_cache.cpp)
+target_link_libraries(test_cache gtest gtest_main gflags ${Boost_LIBRARIES} aio ${JemallocLibs} ${FOLLY_LIBRARIES})
+add_test(NAME test_cache COMMAND test_cache)
