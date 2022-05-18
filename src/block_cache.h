@@ -42,7 +42,6 @@ class BlockCache : boost::noncopyable {
 
   BlockCache(size_t cap) : capacity(cap), cache_(cap), head_(0) {}
   ~BlockCache() {
-    std::cout << "release block cache" << std::endl;
     list_.clear();
   }
 
@@ -51,7 +50,6 @@ class BlockCache : boost::noncopyable {
   static uint32_t CountRefs(uint32_t flags) { return flags >> kRefsOffset; }
 
   void recycleHandle(CacheHandle* handle) {
-    std::cout << fmt::format("recycle key: {}\n", handle->key);
     static auto& pool = POOL::getInstance();
     // 回收block
     pool.recycle(handle->value);
@@ -69,12 +67,10 @@ class BlockCache : boost::noncopyable {
             flags, 0, std::memory_order_acquire, std::memory_order_relaxed)) {
       cache_.erase(handle->key);
       recycleHandle(handle);
-      std::cout << "try make room success\n";
       return true;
     }
     // usage 置0
     handle->flags.fetch_and(~kUsageBit, std::memory_order_relaxed);
-    std::cout << "try make room failed\n";
     return false;
   }
 
@@ -156,7 +152,6 @@ class BlockCache : boost::noncopyable {
   bool insert(K key, V value, uint32_t hash) {
     std::lock_guard lock(mtx);
     if (not make_room()) {
-      std::cout << "make room failed\n";
       return false;
     }
     CacheHandle* handle = nullptr;
@@ -182,7 +177,6 @@ class BlockCache : boost::noncopyable {
     }
     cache_.insert(key, handle);
     size_.fetch_add(1, std::memory_order_relaxed);
-    std::cout << "insert success" << std::endl;
     return true;
   }
 
@@ -268,7 +262,6 @@ class SharedBlockCache {
 
   bool release(CacheHandle* handle) {
     int32_t hash = handle->key & mask;
-    // 设置usage位，表示cache命中过
     return shared_cache[hash]->Release(handle);
   }
 
