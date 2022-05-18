@@ -41,9 +41,7 @@ class BlockCache : boost::noncopyable {
   };
 
   BlockCache(size_t cap) : capacity(cap), cache_(cap), head_(0) {}
-  ~BlockCache() {
-    list_.clear();
-  }
+  ~BlockCache() { list_.clear(); }
 
   static bool InCache(uint32_t flags) { return flags & kInCacheBit; }
   static bool HasUsage(uint32_t flags) { return flags & kUsageBit; }
@@ -127,7 +125,10 @@ class BlockCache : boost::noncopyable {
     return false;
   }
 
-  bool Unref(CacheHandle* handle) {
+  bool Unref(CacheHandle* handle, bool set_usage = false) {
+    if (set_usage) {
+      handle->flags.fetch_or(kUsageBit, std::memory_order_relaxed);
+    }
     bool ret = false;
     uint32_t flags =
         handle->flags.fetch_sub(kOneRef, std::memory_order_acq_rel);
@@ -145,8 +146,7 @@ class BlockCache : boost::noncopyable {
 
   bool Release(CacheHandle* handle) {
     // 设置usage位，表示cache命中过
-    handle->flags.fetch_or(kUsageBit, std::memory_order_relaxed);
-    return Unref(handle);
+    return Unref(handle, true);
   }
 
   bool insert(K key, V value, uint32_t hash) {
