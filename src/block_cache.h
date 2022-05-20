@@ -147,12 +147,12 @@ class BlockCache : boost::noncopyable {
     return Unref(handle);
   }
 
-  bool insert(K key, V value, uint32_t hash) {
+  CacheHandle* insert(K key, V value, uint32_t hash, bool hold_ref = false) {
+    CacheHandle* handle = nullptr;
     std::lock_guard lock(mtx);
     if (not make_room()) {
-      return false;
+      return handle;
     }
-    CacheHandle* handle = nullptr;
     // 回收的list如果有则复用
     if (!recycle_.empty()) {
       handle = recycle_.back();
@@ -165,7 +165,7 @@ class BlockCache : boost::noncopyable {
     handle->key = key;
     handle->hash = hash;
     handle->value = value;
-    uint32_t flags = kInCacheBit;
+    uint32_t flags = hold_ref ? kInCacheBit + kOneRef : kInCacheBit;
     handle->flags.store(flags, std::memory_order_relaxed);
     auto iter = cache_.find(key);
     // 如果cache中存在，则对handle设置not in cahce
@@ -175,7 +175,7 @@ class BlockCache : boost::noncopyable {
     }
     cache_.insert(key, handle);
     size_.fetch_add(1, std::memory_order_relaxed);
-    return true;
+    return handle;
   }
 
   CacheHandle* find(K key, uint32_t hash) {
@@ -243,9 +243,19 @@ class SharedBlockCache {
     }
   }
 
+  // insert and hold handle
+  inline CacheHandle* insert_and_hold(int32_t key, BlockPtr value) {
+    uint32_t hash = key & mask;
+    auto* handle = shared_cache[hash]->insert(key, value, hash, true);
+    return handle;
+  }
+
+  // insert and not hold handle
   inline bool insert(int32_t key, BlockPtr value) {
     uint32_t hash = key & mask;
-    return shared_cache[hash]->insert(key, value, hash);
+    auto* handle = shared_cache[hash]->insert(key, value, hash, false);
+    if (handle) return true;
+    return false;
   }
 
   inline CacheHandle* find(int32_t key) {
