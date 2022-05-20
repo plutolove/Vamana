@@ -67,7 +67,7 @@ class BlockCache : boost::noncopyable {
       recycleHandle(handle);
       return true;
     }
-    // usage 置0
+    // 不能释放则usage 置0
     handle->flags.fetch_and(~kUsageBit, std::memory_order_relaxed);
     return false;
   }
