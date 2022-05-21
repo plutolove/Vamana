@@ -26,7 +26,7 @@ DiskIndex<T>::DiskIndex(const std::string& path, size_t cache_shard_num,
   head->len = BLOCK_SIZE;
   head->start = 0;
   // index 最开始保存配置信息
-  if (not reader.read(head)) {
+  if (not reader.read(head)) { 
     throw Exception(-1, "read head from {} failed, block id: 0", path);
   }
   size_t offset = 0;
