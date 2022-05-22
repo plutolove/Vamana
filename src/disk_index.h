@@ -65,7 +65,7 @@ class DiskIndex : boost::noncopyable {
         start_block_ptr->getNeighborSize(num_neighbors_offset(centroid_idx));
     // 质心的neighbors
     static int32_t* start_neighbors =
-        start_block_ptr->getPtr<int32_t>(neighbors_offset(start_block_id));
+        start_block_ptr->getPtr<int32_t>(neighbors_offset(centroid_idx));
     // 质心到query的距离
     float dist = calc(query, start_vec_ptr, dim);
     Node nd(centroid_idx, dist, start_num_neighbors, start_neighbors);

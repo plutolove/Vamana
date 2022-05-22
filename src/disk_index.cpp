@@ -124,8 +124,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
     q.pop();
     size_t idx = 0;
     while (idx < top.num_neighbors) {
-      auto neighbors_id = top.neighbors[idx];
-      if (visit.count(neighbors_id)) {
+      if (visit.count(top.neighbors[idx])) {
         idx++;
         continue;
       }
@@ -136,6 +135,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
       std::vector<int32_t> cached_idx;
       std::vector<int32_t> cached_blockid;
       while (uncached_blocks.size() < width && idx < top.num_neighbors) {
+        auto neighbors_id = top.neighbors[idx];
         auto block_idx = block_id(neighbors_id);
         // 当前的id如果在之前用到的block中，则不再读取cache，直接从used_block中取
         auto it = used_block.find(block_idx);
@@ -186,7 +186,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
         if (visit.count(id)) continue;
         auto* vec_ptr = cur_block->getPtr<float>(vec_offset(id));
         T dist = calc(query, vec_ptr, dim);
-        if (topL.size() == L && dist >= topL.rbegin()->dist) continue;
+        if (topL.size() == L && dist >= topL.begin()->dist) continue;
         int32_t num_neighbors =
             cur_block->getNeighborSize(num_neighbors_offset(id));
 
@@ -200,7 +200,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
         // 标记访问过
         visit.insert(id);
         if (topL.size() > L) {
-          auto iter = topL.rbegin();
+          auto iter = topL.begin();
           topL.erase(*iter);
         }
       }
@@ -214,7 +214,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
         auto* vec_ptr = cur_block->getPtr<float>(vec_offset(id));
         T dist = calc(query, vec_ptr, dim);
         // 距离大于等于topL中最大的则跳过
-        if (topL.size() == L && dist >= topL.rbegin()->dist) continue;
+        if (topL.size() == L && dist >= topL.begin()->dist) continue;
         int32_t num_neighbors =
             cur_block->getNeighborSize(num_neighbors_offset(id));
 
@@ -235,7 +235,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
           block_pool.recycle(cur_block);
         }
         if (topL.size() > L) {
-          auto iter = topL.rbegin();
+          auto iter = topL.begin();
           topL.erase(*iter);
         }
       }
@@ -246,9 +246,11 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
     clock_cache->release(handle);
   }
   ret.reserve(K);
-  auto iter = topL.begin();
+  auto iter = topL.rbegin();
+  std::cout << fmt::format("begin: {}, rbegin: {}\n", topL.begin()->dist,
+                           topL.rbegin()->dist);
   while (K--) {
-    if (iter == topL.end()) break;
+    if (iter == topL.rend()) break;
     ret.emplace_back(iter->idx);
     iter++;
   }
