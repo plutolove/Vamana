@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
   auto s = std::chrono::high_resolution_clock::now();
 #pragma omp parallel for schedule(dynamic, 32)
   for (size_t i = 0; i < 1000; i++) {
-    auto ret = dindex.search(_test_ptr[i], 1, option.L + 5, 2);
+    auto ret = dindex.search(_test_ptr[i], 1, option.L + 5, 4);
     if (ret.size())
       std::cout << ret[0] << std::endl;
     else
