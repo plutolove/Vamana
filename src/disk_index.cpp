@@ -18,10 +18,11 @@ namespace vamana {
 
 template <typename T>
 DiskIndex<T>::DiskIndex(const std::string& path, size_t cache_shard_num,
-                        size_t cap)
+                        size_t cap, size_t hop_num)
     : path(path),
       reader(path),
-      clock_cache(std::make_shared<SharedBlockCache>(cache_shard_num, cap)) {
+      clock_cache(std::make_shared<SharedBlockCache>(cache_shard_num, cap)),
+      hop_num(hop_num) {
   head = BlockPool::getInstance().getSingleBlockPtr();
   head->len = BLOCK_SIZE;
   head->start = 0;
@@ -45,7 +46,7 @@ DiskIndex<T>::DiskIndex(const std::string& path, size_t cache_shard_num,
       N, dim, R, centroid_idx, num_per_block, size_per_record);
 
   // 起点开始3跳的block cache到static_cache
-  init_static_cache(2);
+  init_static_cache(hop_num);
 }
 
 template <typename T>
@@ -118,7 +119,8 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
   std::vector<SharedBlockCache::CacheHandle*> handles;
   // 保存所有本次请求用到的block ptr
   std::unordered_map<int32_t, BlockPtr> used_block;
-
+  size_t hit = 0;
+  size_t not_hit = 0;
   while (not q.empty()) {
     Node top = q.top();
     q.pop();
@@ -143,6 +145,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
           cached_idx.emplace_back(neighbors_id);
           cached_blockid.emplace_back(block_idx);
           idx++;
+          hit++;
           continue;
         }
         // if block cache get block
@@ -154,6 +157,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
           used_block[block_idx] = iter->second;
           cached_blockid.emplace_back(block_idx);
           idx++;
+          hit++;
           continue;
         }
         // block cache
@@ -164,6 +168,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
           used_block[block_idx] = handle->value;
           handles.emplace_back(handle);
           idx++;
+          hit++;
           continue;
         }
         // uncached_blocks
@@ -173,6 +178,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
         new_block->len = BLOCK_SIZE;
         uncached_blocks.emplace_back(new_block);
         uncached_idx.emplace_back(neighbors_id);
+        not_hit++;
         idx++;
       }
       // async read uncached block
@@ -252,6 +258,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
     ret.emplace_back(iter->idx);
     iter++;
   }
+  std::cout << fmt::format("hit: {}, not_hit: {}\n", hit, not_hit);
   return ret;
 }
 

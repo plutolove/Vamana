@@ -72,16 +72,12 @@ int main(int argc, char** argv) {
   std::cout << fmt::format("read data finished, size: {}, dim: {}\n", N, dim);
   in.close();
 
-  DiskIndex<float> dindex("../data/disk_index.bin", 8, 256);
+  DiskIndex<float> dindex("../data/disk_index.bin", 8, 256, 3);
 
   auto s = std::chrono::high_resolution_clock::now();
-#pragma omp parallel for schedule(dynamic, 32)
+#pragma omp parallel for schedule(dynamic, 16)
   for (size_t i = 0; i < 1000; i++) {
     auto ret = dindex.search(_test_ptr[i], 1, option.L + 5, 4);
-    if (ret.size())
-      std::cout << ret[0] << std::endl;
-    else
-      std::cout << "empty" << std::endl;
   }
   std::chrono::duration<double> diff =
       std::chrono::high_resolution_clock::now() - s;

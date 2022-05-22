@@ -31,7 +31,8 @@ class DiskIndex : boost::noncopyable {
     bool operator<(const Node& right) const { return dist > right.dist; }
   };
 
-  DiskIndex(const std::string& path, size_t cache_shard_num, size_t cap);
+  DiskIndex(const std::string& path, size_t cache_shard_num, size_t cap,
+            size_t hop_num);
 
   void init_static_cache(size_t hop);
 
@@ -78,6 +79,7 @@ class DiskIndex : boost::noncopyable {
   std::string path;
   BlockReader reader;
   std::shared_ptr<SharedBlockCache> clock_cache;
+  size_t hop_num;
   std::unordered_map<int32_t, BlockPtr> static_cache;
   std::list<Block> static_block;
 
