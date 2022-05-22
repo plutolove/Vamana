@@ -26,7 +26,7 @@ DiskIndex<T>::DiskIndex(const std::string& path, size_t cache_shard_num,
   head->len = BLOCK_SIZE;
   head->start = 0;
   // index 最开始保存配置信息
-  if (not reader.read(head)) { 
+  if (not reader.read(head)) {
     throw Exception(-1, "read head from {} failed, block id: 0", path);
   }
   size_t offset = 0;
@@ -45,7 +45,7 @@ DiskIndex<T>::DiskIndex(const std::string& path, size_t cache_shard_num,
       N, dim, R, centroid_idx, num_per_block, size_per_record);
 
   // 起点开始3跳的block cache到static_cache
-  init_static_cache(3);
+  init_static_cache(2);
 }
 
 template <typename T>
@@ -56,18 +56,18 @@ void DiskIndex<T>::init_static_cache(size_t hop) {
   while (not q.empty()) {
     auto head = q.front();
     q.pop();
-
+    auto block_idx = block_id(head.first);
     // 只保存hop的block
     if (head.second > hop) continue;
 
-    auto iter = static_cache.find(head.first);
+    auto iter = static_cache.find(block_idx);
     BlockPtr cur_block = nullptr;
     if (iter == static_cache.end()) {
       // 没有在cache中，则新建一个
       static_block.emplace_back();
       cur_block = &static_block.back();
       // 初始化block id，offset，len
-      cur_block->idx = block_id(head.first);
+      cur_block->idx = block_idx;
       cur_block->start = block_offset(head.first);
 
       cur_block->len = BLOCK_SIZE;
@@ -87,7 +87,6 @@ void DiskIndex<T>::init_static_cache(size_t hop) {
         cur_block->getPtr<int32_t>(neighbors_offset(head.first));
 
     for (int32_t i = 0; i < num_neighbors; i++) {
-      auto it = static_cache.find(neighbors[i]);
       if (visit.count(neighbors[i]) || head.second + 1 > hop) continue;
       visit.insert(neighbors[i]);
       q.push(std::make_pair(neighbors[i], head.second + 1));
