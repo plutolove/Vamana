@@ -72,9 +72,20 @@ int main(int argc, char** argv) {
   std::cout << fmt::format("read data finished, size: {}, dim: {}\n", N, dim);
   in.close();
 
-  DiskIndex<float> dindex("../data/disk_index.bin", 8, 128);
-  auto ret = dindex.search(_test_ptr[73], 1, option.L + 5, 2);
-  if (ret.size() > 0) std::cout << ret[0] << std::endl;
+  DiskIndex<float> dindex("../data/disk_index.bin", 8, 256);
+
+  auto s = std::chrono::high_resolution_clock::now();
+#pragma omp parallel for schedule(dynamic, 32)
+  for (size_t i = 0; i < 1000; i++) {
+    auto ret = dindex.search(_test_ptr[i], 1, option.L + 5, 2);
+    if (ret.size())
+      std::cout << ret[0] << std::endl;
+    else
+      std::cout << "empty" << std::endl;
+  }
+  std::chrono::duration<double> diff =
+      std::chrono::high_resolution_clock::now() - s;
+  std::cout << fmt::format("search time cost: {}s\n", diff.count());
   delete[] _test;
   return 0;
 }

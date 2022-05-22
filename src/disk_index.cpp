@@ -247,8 +247,6 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
   }
   ret.reserve(K);
   auto iter = topL.rbegin();
-  std::cout << fmt::format("begin: {}, rbegin: {}\n", topL.begin()->dist,
-                           topL.rbegin()->dist);
   while (K--) {
     if (iter == topL.rend()) break;
     ret.emplace_back(iter->idx);
