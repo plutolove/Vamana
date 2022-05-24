@@ -9,9 +9,6 @@
 
 namespace vamana {
 
-typedef struct io_event io_event_t;
-typedef struct iocb iocb_t;
-
 BlockReader::BlockReader(const std::string& path)
     : io_contexts(lockfree_queue(1024)) {
   int flags = O_DIRECT | O_RDONLY;
@@ -22,6 +19,7 @@ BlockReader::BlockReader(const std::string& path)
 bool BlockReader::read(std::vector<BlockPtr>& blocks) {
   io_context_t ctx = 0;
   if (not io_contexts.pop(ctx)) {
+    ctx = 0;
     int ret = io_setup(MAX_EVENTS, &ctx);
     if (ret != 0) {
       std::cout << fmt::format("io_setup() error, ret: {}, status: {}", ret,

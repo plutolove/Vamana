@@ -14,3 +14,6 @@ const int BLOCK_SIZE = 4096;
 const int MAX_EVENTS = 1024;
 
 using FileHandler = int;
+
+typedef struct io_event io_event_t;
+typedef struct iocb iocb_t;
