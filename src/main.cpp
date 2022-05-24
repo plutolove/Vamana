@@ -30,6 +30,8 @@ DEFINE_string(teat_data_path, "../data/test.bin", "test data path");
 DEFINE_int32(thread_num, 16, "openmp thread num");
 using namespace vamana;
 
+const int TEST_SIZE = 10000;
+
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   std::cout << FLAGS_N << std::endl;
@@ -73,12 +75,12 @@ int main(int argc, char** argv) {
   std::cout << fmt::format("read data finished, size: {}, dim: {}\n", N, dim);
   in.close();
 
-  DiskIndex<float> dindex("../data/disk_index.bin", 8, 256, 3);
+  DiskIndex<float> dindex("../data/disk_index.bin", 8, 128, 3);
 
   auto s = std::chrono::high_resolution_clock::now();
-  double time_cost[1000];
-#pragma omp parallel for schedule(dynamic, 16)
-  for (size_t i = 0; i < 1000; i++) {
+  double time_cost[TEST_SIZE];
+#pragma omp parallel for schedule(dynamic, 1)
+  for (size_t i = 0; i < TEST_SIZE; i++) {
     auto st = std::chrono::high_resolution_clock::now();
     auto ret = dindex.search(_test_ptr[i], 1, option.L + 5, 4);
     std::chrono::duration<double, std::milli> diff =
@@ -88,10 +90,10 @@ int main(int argc, char** argv) {
   std::chrono::duration<double> diff =
       std::chrono::high_resolution_clock::now() - s;
   double res = 0;
-  for (size_t i = 0; i < 1000; i++) {
+  for (size_t i = 0; i < TEST_SIZE; i++) {
     res += time_cost[i];
   }
-  std::cout << fmt::format("search time cost avg: {}\n", res / 1000.0);
+  std::cout << fmt::format("search time cost avg: {}\n", res / TEST_SIZE);
   std::cout << fmt::format("search time cost: {}s\n", diff.count());
   delete[] _test;
   return 0;

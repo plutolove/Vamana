@@ -127,6 +127,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
       std::cout << fmt::format("io_setup() error, ret: {}, status: {}", ret,
                                strerror(ret))
                 << std::endl;
+      return {};
     }
   }
 
