@@ -130,6 +130,8 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
     }
   }
 
+  double read_tc = 0;
+
   std::vector<int32_t> ret;
   // 小根堆加速优化bfs搜索，每次取dist最小的node进行搜索
   std::priority_queue<Node> q;
@@ -208,8 +210,13 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
         not_hit++;
         idx++;
       }
+      auto st = std::chrono::high_resolution_clock::now();
       // async read uncached block
       reader.read(uncached_blocks, ctx);
+      std::chrono::duration<double, std::milli> diff =
+          std::chrono::high_resolution_clock::now() - st;
+      read_tc += diff.count();
+
       // process cached
       for (size_t i = 0; i < cached_idx.size(); i++) {
         auto id = cached_idx[i];
@@ -291,7 +298,8 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
     ret.emplace_back(iter->idx);
     iter++;
   }
-  std::cout << fmt::format("hit: {}, not_hit: {}\n", hit, not_hit);
+  std::cout << fmt::format("read block time cost: {}\n", read_tc);
+  // std::cout << fmt::format("hit: {}, not_hit: {}\n", hit, not_hit);
   return ret;
 }
 
