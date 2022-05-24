@@ -1,4 +1,6 @@
 #pragma once
+#include <libaio.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -7,6 +9,7 @@
 
 #include "block.h"
 #include "block_cache.h"
+#include "boost/lockfree/queue.hpp"
 #include "boost/noncopyable.hpp"
 #include "common/define.h"
 #include "common/exception.h"
@@ -17,6 +20,7 @@ namespace vamana {
 template <typename T>
 class DiskIndex : boost::noncopyable {
  public:
+  using lockfree_queue = boost::lockfree::queue<io_context_t>;
   struct Node {
     int32_t idx = -1;
     float dist = 0;
@@ -34,7 +38,18 @@ class DiskIndex : boost::noncopyable {
   DiskIndex(const std::string& path, size_t cache_shard_num, size_t cap,
             size_t hop_num);
 
-  void init_static_cache(size_t hop);
+  ~DiskIndex() {
+    int cnt = 0;
+    while (not io_contexts.empty()) {
+      io_context_t ctx;
+      io_contexts.pop(ctx);
+      io_destroy(ctx);
+      cnt++;
+    }
+    std::cout << "io_destroy cnt: " << cnt << std::endl;
+  }
+
+  void init_static_cache(size_t hop, io_context_t ctx);
 
   inline size_t block_id(size_t idx) { return idx / num_per_block + 1; }
 
@@ -82,6 +97,8 @@ class DiskIndex : boost::noncopyable {
   size_t hop_num;
   std::unordered_map<int32_t, BlockPtr> static_cache;
   std::list<Block> static_block;
+
+  lockfree_queue io_contexts;
 
   BlockPtr head;
   size_t num_per_block;

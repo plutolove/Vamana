@@ -7,9 +7,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <vector>
 
 #include "boost/core/noncopyable.hpp"
-#include "boost/lockfree/queue.hpp"
 #include "boost/noncopyable.hpp"
 #include "common/define.h"
 #include "fcntl.h"
@@ -51,8 +51,6 @@ struct Block : boost::noncopyable {
 using BlockPtr = Block*;
 
 class BlockReader : boost::noncopyable {
-  using lockfree_queue = boost::lockfree::queue<io_context_t>;
-
  public:
   BlockReader(const std::string& path);
   ~BlockReader() {
@@ -60,25 +58,16 @@ class BlockReader : boost::noncopyable {
       ::fcntl(fd, F_GETFD);
       ::close(fd);
     }
-    int cnt = 0;
-    while (not io_contexts.empty()) {
-      io_context_t ctx;
-      io_contexts.pop(ctx);
-      io_destroy(ctx);
-      cnt++;
-    }
-    std::cout << "io_destroy cnt: " << cnt << std::endl;
   }
 
   // 读取多个block
-  bool read(std::vector<BlockPtr>& blocks);
+  bool read(std::vector<BlockPtr>& blocks, io_context_t ctx);
   // 读取一个block
-  bool read(BlockPtr& block);
+  bool read(BlockPtr& block, io_context_t ctx);
 
  protected:
   uint64_t file_sz;
   FileHandler fd = -1;
-  lockfree_queue io_contexts;
 };
 
 }  // namespace vamana

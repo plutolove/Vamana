@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cstddef>
 #include <iostream>
 #include <memory>
@@ -9,25 +10,13 @@
 
 namespace vamana {
 
-BlockReader::BlockReader(const std::string& path)
-    : io_contexts(lockfree_queue(1024)) {
+BlockReader::BlockReader(const std::string& path) {
   int flags = O_DIRECT | O_RDONLY;
   fd = ::open(path.c_str(), flags);
   assert(fd != -1);
 }
 
-bool BlockReader::read(std::vector<BlockPtr>& blocks) {
-  io_context_t ctx = 0;
-  if (not io_contexts.pop(ctx)) {
-    ctx = 0;
-    int ret = io_setup(MAX_EVENTS, &ctx);
-    if (ret != 0) {
-      std::cout << fmt::format("io_setup() error, ret: {}, status: {}", ret,
-                               strerror(ret))
-                << std::endl;
-    }
-  }
-
+bool BlockReader::read(std::vector<BlockPtr>& blocks, io_context_t ctx) {
   size_t iter_num = DIV_ROUND_UP(blocks.size(), MAX_EVENTS);
   size_t idx = 0;
   for (size_t iter_id = 0; iter_id < iter_num; ++iter_id) {
@@ -64,24 +53,10 @@ bool BlockReader::read(std::vector<BlockPtr>& blocks) {
       }
     }
   }
-  if (not io_contexts.push(ctx)) {
-    io_destroy(ctx);
-  }
   return true;
 }
 
-bool BlockReader::read(BlockPtr& block) {
-  io_context_t ctx = 0;
-  if (not io_contexts.pop(ctx)) {
-    int ret = io_setup(MAX_EVENTS, &ctx);
-    if (ret != 0) {
-      std::cout << fmt::format("io_setup() error, ret: {}, status: {}", ret,
-                               strerror(ret))
-                << std::endl;
-      return false;
-    }
-  }
-
+bool BlockReader::read(BlockPtr& block, io_context_t ctx) {
   std::vector<iocb_t*> cbs(1, nullptr);
   std::vector<io_event_t> evts(1);
   std::vector<struct iocb> cb(1);
@@ -104,9 +79,6 @@ bool BlockReader::read(BlockPtr& block) {
                 << std::endl;
       return false;
     }
-  }
-  if (not io_contexts.push(ctx)) {
-    io_destroy(ctx);
   }
   return true;
 }

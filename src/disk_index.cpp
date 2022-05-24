@@ -22,12 +22,23 @@ DiskIndex<T>::DiskIndex(const std::string& path, size_t cache_shard_num,
     : path(path),
       reader(path),
       clock_cache(std::make_shared<SharedBlockCache>(cache_shard_num, cap)),
-      hop_num(hop_num) {
+      hop_num(hop_num),
+      io_contexts(1024) {
+  io_context_t ctx = 0;
+  if (not io_contexts.pop(ctx)) {
+    ctx = 0;
+    int ret = io_setup(MAX_EVENTS, &ctx);
+    if (ret != 0) {
+      std::cout << fmt::format("io_setup() error, ret: {}, status: {}", ret,
+                               strerror(ret))
+                << std::endl;
+    }
+  }
   head = BlockPool::getInstance().getSingleBlockPtr();
   head->len = BLOCK_SIZE;
   head->start = 0;
   // index 最开始保存配置信息
-  if (not reader.read(head)) {
+  if (not reader.read(head, ctx)) {
     throw Exception(-1, "read head from {} failed, block id: 0", path);
   }
   size_t offset = 0;
@@ -46,11 +57,16 @@ DiskIndex<T>::DiskIndex(const std::string& path, size_t cache_shard_num,
       N, dim, R, centroid_idx, num_per_block, size_per_record);
 
   // 起点开始3跳的block cache到static_cache
-  init_static_cache(hop_num);
+  init_static_cache(hop_num, ctx);
+
+  // 回收ctx
+  if (not io_contexts.push(ctx)) {
+    io_destroy(ctx);
+  }
 }
 
 template <typename T>
-void DiskIndex<T>::init_static_cache(size_t hop) {
+void DiskIndex<T>::init_static_cache(size_t hop, io_context_t ctx) {
   std::queue<std::pair<int32_t, size_t>> q;
   std::unordered_set<int32_t> visit{int32_t(centroid_idx)};
   q.push(std::make_pair(int32_t(centroid_idx), 0));
@@ -72,7 +88,7 @@ void DiskIndex<T>::init_static_cache(size_t hop) {
       cur_block->start = block_offset(head.first);
 
       cur_block->len = BLOCK_SIZE;
-      if (reader.read(cur_block)) {
+      if (reader.read(cur_block, ctx)) {
         // 存到cache
         static_cache[cur_block->idx] = cur_block;
       }
@@ -102,6 +118,17 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
                                           size_t width) {
   // block对象池，如果block不在cache中，从对象池分配block然后异步读
   static auto& block_pool = BlockPool::getInstance();
+
+  io_context_t ctx = 0;
+  if (not io_contexts.pop(ctx)) {
+    ctx = 0;
+    int ret = io_setup(MAX_EVENTS, &ctx);
+    if (ret != 0) {
+      std::cout << fmt::format("io_setup() error, ret: {}, status: {}", ret,
+                               strerror(ret))
+                << std::endl;
+    }
+  }
 
   std::vector<int32_t> ret;
   // 小根堆加速优化bfs搜索，每次取dist最小的node进行搜索
@@ -182,7 +209,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
         idx++;
       }
       // async read uncached block
-      reader.read(uncached_blocks);
+      reader.read(uncached_blocks, ctx);
       // process cached
       for (size_t i = 0; i < cached_idx.size(); i++) {
         auto id = cached_idx[i];
@@ -247,6 +274,12 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
       }
     }
   }
+
+  // 回收ctx
+  if (not io_contexts.push(ctx)) {
+    io_destroy(ctx);
+  }
+
   // 释放block cache
   for (auto& handle : handles) {
     clock_cache->release(handle);
