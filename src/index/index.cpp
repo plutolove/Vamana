@@ -8,6 +8,7 @@
 #include <cstring>
 #include <fstream>
 #include <ios>
+#include <memory>
 #include <mutex>
 #include <random>
 #include <utility>
@@ -18,6 +19,7 @@
 #include "fmt/format.h"
 #include "index.h"
 #include "omp.h"
+#include "util/math_util.h"
 
 namespace vamana {
 
@@ -416,6 +418,66 @@ size_t VamanaIndex<T>::load_disk_index(const std::string& path) {
     break;
   }
   return 0;
+}
+
+template <typename T>
+static inline size_t gen_train_data(T* from, T* train_data, float p_val,
+                                    size_t N, size_t dim) {
+  auto train_idx = random_split(N, p_val);
+  size_t iter = 0;
+  for (auto& idx : train_idx) {
+    std::memcpy(train_data + iter * dim, from + idx * dim, sizeof(T) * dim);
+    iter++;
+  }
+  return train_idx.size();
+}
+
+template <typename T>
+static inline void fetch_sub_data(T* from, T* sub_data, size_t id, size_t N,
+                                  size_t dim, size_t sdim) {
+  size_t offset = sdim * id;
+  for (size_t i = 0; i < N; i++) {
+    std::memcpy(sub_data + sdim * i, from + i * dim + offset, sizeof(T) * sdim);
+  }
+}
+
+template <typename T>
+void VamanaIndex<T>::gen_pq_index() {
+  float p_val = TRAINING_SET_SIZE * 1.0 / option.N;
+
+  std::unique_ptr<T[]> train_data =
+      std::make_unique<T[]>(option.N * option.dim);
+
+  std::unique_ptr<T[]> sub_data = std::make_unique<T[]>(option.N * option.sdim);
+
+  std::vector<std::shared_ptr<T[]>> centroid_list;
+
+  size_t size =
+      gen_train_data(_data, train_data.get(), p_val, option.N, option.dim);
+
+  for (size_t id = 0; id < option.M; id++) {
+    std::shared_ptr<T[]> cent_data(new T[option.ksub * option.sdim]);
+    std::memset(sub_data.get(), 0, sizeof(T) * option.N * option.sdim);
+    fetch_sub_data<T>(train_data.get(), sub_data.get(), id, size, option.dim,
+                      option.sdim);
+
+    kmeans_cluster(train_data.get(), size, option.sdim, cent_data.get(),
+                   option.ksub, 12);
+
+    centroid_list.emplace_back(cent_data);
+  }
+
+  std::vector<T*> centroid_ptrs;
+  centroid_ptrs.reserve(centroid_list.size());
+  for (auto& cent : centroid_list) {
+    centroid_ptrs.emplace_back(cent.get());
+  }
+
+  // #pragma omp parallel for schedule(dynamic, 256)
+  for (size_t i = 0; i < 6; i++) {
+    auto codes = compute_pq_code(vec_ptr[i], centroid_ptrs, option.sdim);
+    std::cout << fmt::format("code: [{}]\n", fmt::join(codes, ", "));
+  }
 }
 
 template class VamanaIndex<float>;

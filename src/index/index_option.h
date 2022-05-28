@@ -28,6 +28,11 @@ struct IndexOption {
   std::string file_name;
   std::string save_path;
   DistanceL2<T> calc;
+
+  // pq
+  size_t M;     // dim % M == 0
+  size_t sdim;  // dim / M
+  static const size_t ksub = 256;
 };
 
 }  // namespace vamana
