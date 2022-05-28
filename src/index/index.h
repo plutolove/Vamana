@@ -66,6 +66,8 @@ class VamanaIndex {
 
   void build();
 
+  void gen_pq_index();
+
   size_t load_index() {
     std::cout << "start read index" << std::endl;
     std::ifstream fin(option.save_path, std::ios::binary);

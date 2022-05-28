@@ -13,6 +13,8 @@
 const int BLOCK_SIZE = 4096;
 const int MAX_EVENTS = 1024;
 
+const int TRAINING_SET_SIZE = 1500000;
+
 using FileHandler = int;
 
 typedef struct io_event io_event_t;
