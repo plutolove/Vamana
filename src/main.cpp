@@ -8,17 +8,17 @@
 #include <random>
 #include <ratio>
 
-#include "block.h"
-#include "block_cache.h"
-#include "block_pool.h"
 #include "common/define.h"
 #include "common/exception.h"
-#include "disk_index.h"
-#include "distance.h"
 #include "fmt/format.h"
 #include "gflags/gflags.h"
-#include "index.h"
-#include "index_option.h"
+#include "index/block.h"
+#include "index/block_cache.h"
+#include "index/block_pool.h"
+#include "index/disk_index.h"
+#include "index/distance.h"
+#include "index/index.h"
+#include "index/index_option.h"
 
 DEFINE_uint64(N, 80000, "data size");
 DEFINE_uint64(dim, 100, "vector dim");

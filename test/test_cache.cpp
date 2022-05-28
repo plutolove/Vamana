@@ -1,7 +1,7 @@
 #include <random>
 
-#include "block_cache.h"
 #include "gtest/gtest.h"
+#include "index/block_cache.h"
 using namespace vamana;
 TEST(TestCache, multhead) {
   auto& pool = BlockPool::getInstance();
