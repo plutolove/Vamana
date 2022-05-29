@@ -48,9 +48,11 @@ int main(int argc, char** argv) {
   option.thread_num = FLAGS_thread_num;
   option.test_N = 20000;
   option.M = 10;
-  option.sdim = 10;
+  option.sdim = option.dim / option.M;
   VamanaIndex<float> index(option);
-  index.gen_pq_index();
+  index.gen_pq_index("../data/pq_index.bin");
+  DiskIndex<float> dindex("../data/disk_index.bin", "../data/pq_index.bin", 8,
+                          128, 3);
   // index.build();
   // index.save_disk_index("../data/disk_index.bin");
   // index.load_disk_index("../data/disk_index.bin");

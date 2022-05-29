@@ -35,8 +35,8 @@ class DiskIndex : boost::noncopyable {
     bool operator<(const Node& right) const { return dist > right.dist; }
   };
 
-  DiskIndex(const std::string& path, size_t cache_shard_num, size_t cap,
-            size_t hop_num);
+  DiskIndex(const std::string& path, const std::string& pq_index_path,
+            size_t cache_shard_num, size_t cap, size_t hop_num);
 
   ~DiskIndex() {
     int cnt = 0;
@@ -50,6 +50,8 @@ class DiskIndex : boost::noncopyable {
   }
 
   void init_static_cache(size_t hop, io_context_t ctx);
+
+  void load_pq_index(const std::string& pq_index_path);
 
   inline size_t block_id(size_t idx) { return idx / num_per_block + 1; }
 
@@ -92,6 +94,7 @@ class DiskIndex : boost::noncopyable {
 
  protected:
   std::string path;
+  std::string pq_index_path;
   BlockReader reader;
   std::shared_ptr<SharedBlockCache> clock_cache;
   size_t hop_num;
@@ -104,6 +107,13 @@ class DiskIndex : boost::noncopyable {
   size_t num_per_block;
   size_t N, dim, R, centroid_idx;
   size_t size_per_record;
+
+  size_t M, sdim, cluster_num;
+
+  std::unique_ptr<uint8_t[]> pq_code;
+  std::vector<std::shared_ptr<T[]>> pq_dist;
+  std::vector<std::shared_ptr<T[]>> cluster_centers;
+
   DistanceL2<T> calc;
 };
 

@@ -1,8 +1,12 @@
 #include <fmt/core.h>
 #include <libaio.h>
 
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <fstream>
+#include <ios>
+#include <memory>
 #include <queue>
 #include <set>
 #include <unordered_set>
@@ -17,9 +21,11 @@
 namespace vamana {
 
 template <typename T>
-DiskIndex<T>::DiskIndex(const std::string& path, size_t cache_shard_num,
-                        size_t cap, size_t hop_num)
+DiskIndex<T>::DiskIndex(const std::string& path,
+                        const std::string& pq_index_path,
+                        size_t cache_shard_num, size_t cap, size_t hop_num)
     : path(path),
+      pq_index_path(pq_index_path),
       reader(path),
       clock_cache(std::make_shared<SharedBlockCache>(cache_shard_num, cap)),
       hop_num(hop_num),
@@ -55,6 +61,8 @@ DiskIndex<T>::DiskIndex(const std::string& path, size_t cache_shard_num,
       "N: {}, dim: {}, R:{}, centroid_idx: {}, num_per_block: {}, size per "
       "record: {}\n",
       N, dim, R, centroid_idx, num_per_block, size_per_record);
+
+  load_pq_index(pq_index_path);
 
   // 起点开始3跳的block cache到static_cache
   init_static_cache(hop_num, ctx);
@@ -302,6 +310,39 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
   std::cout << fmt::format("read block time cost: {}\n", read_tc);
   // std::cout << fmt::format("hit: {}, not_hit: {}\n", hit, not_hit);
   return ret;
+}
+
+template <typename T>
+void DiskIndex<T>::load_pq_index(const std::string& pq_index_path) {
+  std::ifstream fin(pq_index_path, std::ios_base::binary);
+  size_t p_num;
+  fin.read(reinterpret_cast<char*>(&p_num), sizeof(size_t));
+  fin.read(reinterpret_cast<char*>(&M), sizeof(size_t));
+  fin.read(reinterpret_cast<char*>(&sdim), sizeof(size_t));
+  fin.read(reinterpret_cast<char*>(&cluster_num), sizeof(size_t));
+  std::cout << fmt::format("N: {}, M: {}, sdim: {}, cluster_num: {}\n", p_num,
+                           M, sdim, cluster_num);
+  assert(N == p_num and N % M == 0 and dim / M == sdim);
+
+  for (size_t id = 0; id < M; id++) {
+    std::shared_ptr<T[]> cent_data(new T[cluster_num * sdim]);
+    std::shared_ptr<T[]> pq(new T[cluster_num * cluster_num]);
+    fin.read(reinterpret_cast<char*>(cent_data.get()),
+             sizeof(T) * cluster_num * sdim);
+    fin.read(reinterpret_cast<char*>(pq.get()),
+             sizeof(T) * cluster_num * cluster_num);
+    cluster_centers.emplace_back(cent_data);
+    pq_dist.emplace_back(pq);
+  }
+
+  pq_code = std::make_unique<uint8_t[]>(N * M);
+
+  for (size_t i = 0; i < N; i++) {
+    fin.read(reinterpret_cast<char*>(pq_code.get() + i * M),
+             M * sizeof(uint8_t));
+  }
+
+  fin.close();
 }
 
 template class DiskIndex<float>;

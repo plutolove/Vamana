@@ -442,7 +442,8 @@ static inline void fetch_sub_data(T* from, T* sub_data, size_t id, size_t N,
 }
 
 template <typename T>
-void VamanaIndex<T>::gen_pq_index() {
+void VamanaIndex<T>::gen_pq_index(const std::string& path) {
+  std::ofstream fout(path, std::ios_base::binary);
   float p_val = TRAINING_SET_SIZE * 1.0 / option.N;
 
   std::unique_ptr<T[]> train_data =
@@ -467,6 +468,33 @@ void VamanaIndex<T>::gen_pq_index() {
 
     centroid_list.emplace_back(cent_data);
   }
+  size_t cluster_num = option.ksub;
+  // N(the number of point(size_t)) M(分段数size_t) sdim(每段的dim，size_t)
+  // cluster_num(每段的聚类数量size_t)
+  fout.write(reinterpret_cast<char*>(&option.N), sizeof(size_t));
+  fout.write(reinterpret_cast<char*>(&option.M), sizeof(size_t));
+  fout.write(reinterpret_cast<char*>(&option.sdim), sizeof(size_t));
+  fout.write(reinterpret_cast<char*>(&cluster_num), sizeof(size_t));
+
+  size_t idx = 0;
+
+  for (auto& center : centroid_list) {
+    std::cout << fmt::format("write segment {} pq index\n", idx);
+    // cluster center vec
+    fout.write(reinterpret_cast<char*>(center.get()),
+               sizeof(T) * option.ksub * option.sdim);
+    T pq_dist[1000];
+    auto* cent_ptr = center.get();
+    for (size_t i = 0; i < option.ksub; i++) {
+      std::memset(pq_dist, 0, sizeof(pq_dist));
+      for (size_t j = 0; j < option.ksub; j++) {
+        pq_dist[j] = option.calc(cent_ptr + i * option.sdim,
+                                 cent_ptr + j * option.sdim, option.sdim);
+      }
+      fout.write(reinterpret_cast<char*>(pq_dist), sizeof(T) * option.ksub);
+    }
+    idx++;
+  }
 
   std::vector<T*> centroid_ptrs;
   centroid_ptrs.reserve(centroid_list.size());
@@ -476,14 +504,28 @@ void VamanaIndex<T>::gen_pq_index() {
 
   std::vector<size_t> cent_id(10, 0);
 
-  // #pragma omp parallel for schedule(dynamic, 256)
-  for (size_t i = 0; i < 6; i++) {
+  std::unique_ptr<uint8_t[]> pq_code =
+      std::make_unique<uint8_t[]>(option.N * option.M);
+  auto* pq_code_ptr = pq_code.get();
+
+#pragma omp parallel for schedule(dynamic, 256)
+  for (size_t i = 0; i < option.N; i++) {
     // compute_closest_centers(_data + i * option.dim + option.sdim * 2, 1,
     //                        option.sdim, centroid_ptrs[2], 256, cent_id);
     // std::cout << fmt::format("closest centers id: {}\n", cent_id[0]);
-    auto codes = compute_pq_code(vec_ptr[i], centroid_ptrs, option.sdim);
-    std::cout << fmt::format("code: [{}]\n", fmt::join(codes, ", "));
+    auto codes = compute_pq_code(vec_ptr[i], centroid_list, option.sdim);
+    std::memcpy(pq_code_ptr + i * option.M, codes.data(),
+                sizeof(uint8_t) * option.M);
+    if (i == 0)
+      std::cout << fmt::format("code: [{}]\n", fmt::join(codes, ", "));
   }
+
+  for (size_t i = 0; i < option.N; i++) {
+    fout.write(reinterpret_cast<char*>(pq_code_ptr + i * option.M),
+               option.M * sizeof(uint8_t));
+  }
+
+  fout.close();
 }
 
 template class VamanaIndex<float>;

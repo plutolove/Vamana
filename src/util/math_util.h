@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <memory>
 #include <random>
 #include <unordered_set>
 
@@ -204,6 +205,30 @@ static inline std::vector<uint8_t> compute_pq_code(const T* query,
   ret.reserve(cent_ptrs.size());
   for (size_t cent_id = 0; cent_id < cent_ptrs.size(); cent_id++) {
     auto* cent_ptr = cent_ptrs[cent_id];
+    auto* query_sub = query + cent_id * dim;
+    size_t code = 0;
+    T dist = std::numeric_limits<T>::max();
+    for (size_t i = 0; i < cluster_num; i++) {
+      auto tmp_dist = calc(query_sub, cent_ptr + i * dim, dim);
+      if (tmp_dist < dist) {
+        dist = tmp_dist;
+        code = i;
+      }
+    }
+    ret.emplace_back(code);
+  }
+  return ret;
+}
+
+template <typename T>
+static inline std::vector<uint8_t> compute_pq_code(
+    const T* query, std::vector<std::shared_ptr<T[]>> cent_ptrs, size_t dim,
+    size_t cluster_num = 256) {
+  static DistanceL2<T> calc;
+  std::vector<uint8_t> ret;
+  ret.reserve(cent_ptrs.size());
+  for (size_t cent_id = 0; cent_id < cent_ptrs.size(); cent_id++) {
+    auto* cent_ptr = cent_ptrs[cent_id].get();
     auto* query_sub = query + cent_id * dim;
     size_t code = 0;
     T dist = std::numeric_limits<T>::max();
