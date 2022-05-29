@@ -1,5 +1,6 @@
 #pragma once
 #include <libaio.h>
+#include <sys/types.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -52,6 +53,20 @@ class DiskIndex : boost::noncopyable {
   void init_static_cache(size_t hop, io_context_t ctx);
 
   void load_pq_index(const std::string& pq_index_path);
+
+  inline uint8_t* get_pq_code(size_t idx) {
+    auto* ptr = pq_code.get();
+    return ptr + idx * M;
+  }
+
+  inline T get_pq_dist(uint8_t* x, uint8_t* y, size_t n) {
+    T ret{};
+    for (size_t i = 0; i < n; i++) {
+      auto* ptr = pq_dist[i].get();
+      ret += ptr[x[i] * cluster_num + y[i]];
+    }
+    return ret;
+  }
 
   inline size_t block_id(size_t idx) { return idx / num_per_block + 1; }
 

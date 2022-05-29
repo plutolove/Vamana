@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
   option.M = 10;
   option.sdim = option.dim / option.M;
   VamanaIndex<float> index(option);
-  index.gen_pq_index("../data/pq_index.bin");
+  // index.gen_pq_index("../data/pq_index.bin");
   DiskIndex<float> dindex("../data/disk_index.bin", "../data/pq_index.bin", 8,
                           128, 3);
   // index.build();
