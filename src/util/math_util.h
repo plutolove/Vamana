@@ -202,11 +202,13 @@ static inline std::vector<uint8_t> compute_pq_code(const T* query,
   static DistanceL2<T> calc;
   std::vector<uint8_t> ret;
   ret.reserve(cent_ptrs.size());
-  for (auto* cent_ptr : cent_ptrs) {
+  for (size_t cent_id = 0; cent_id < cent_ptrs.size(); cent_id++) {
+    auto* cent_ptr = cent_ptrs[cent_id];
+    auto* query_sub = query + cent_id * dim;
     size_t code = 0;
     T dist = std::numeric_limits<T>::max();
     for (size_t i = 0; i < cluster_num; i++) {
-      auto tmp_dist = calc(query, cent_ptr + i * dim, dim);
+      auto tmp_dist = calc(query_sub, cent_ptr + i * dim, dim);
       if (tmp_dist < dist) {
         dist = tmp_dist;
         code = i;

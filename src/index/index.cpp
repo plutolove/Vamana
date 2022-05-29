@@ -458,10 +458,11 @@ void VamanaIndex<T>::gen_pq_index() {
   for (size_t id = 0; id < option.M; id++) {
     std::shared_ptr<T[]> cent_data(new T[option.ksub * option.sdim]);
     std::memset(sub_data.get(), 0, sizeof(T) * option.N * option.sdim);
+
     fetch_sub_data<T>(train_data.get(), sub_data.get(), id, size, option.dim,
                       option.sdim);
 
-    kmeans_cluster(train_data.get(), size, option.sdim, cent_data.get(),
+    kmeans_cluster(sub_data.get(), size, option.sdim, cent_data.get(),
                    option.ksub, 12);
 
     centroid_list.emplace_back(cent_data);
@@ -473,8 +474,13 @@ void VamanaIndex<T>::gen_pq_index() {
     centroid_ptrs.emplace_back(cent.get());
   }
 
+  std::vector<size_t> cent_id(10, 0);
+
   // #pragma omp parallel for schedule(dynamic, 256)
   for (size_t i = 0; i < 6; i++) {
+    // compute_closest_centers(_data + i * option.dim + option.sdim * 2, 1,
+    //                        option.sdim, centroid_ptrs[2], 256, cent_id);
+    // std::cout << fmt::format("closest centers id: {}\n", cent_id[0]);
     auto codes = compute_pq_code(vec_ptr[i], centroid_ptrs, option.sdim);
     std::cout << fmt::format("code: [{}]\n", fmt::join(codes, ", "));
   }
