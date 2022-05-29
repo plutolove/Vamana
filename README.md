@@ -12,7 +12,7 @@ mkdir build && cmake .. && make
 * first block: the number of point(size_t), dim(size_t), R(size_t), centroid_id(size_t)
 * 4k per block: [vec: the number of neighbors: neighbors]
 
-#### Graph Index  
+#### PQ Index  
 * N(the number of point(size_t)) M(分段数size_t) sdim(每段的dim，size_t) cluster_num(每段的聚类数量size_t)
 * 接下来M个block，每个block结构一样
   * cluster_num 个 sdim大小的vec，表示聚类中心的vec
