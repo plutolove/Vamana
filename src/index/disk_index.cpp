@@ -305,6 +305,8 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
   auto iter = topL.rbegin();
   while (K--) {
     if (iter == topL.rend()) break;
+    std::cout << fmt::format("top res id: {}, dist: {}\n", iter->idx,
+                             iter->dist);
     ret.emplace_back(iter->idx);
     iter++;
   }
@@ -379,12 +381,15 @@ std::vector<int32_t> DiskIndex<T>::search_with_pq(T* query, size_t K, size_t L,
   std::unordered_set<int32_t> visit;
 
   auto start_node = genStartNode(query);
+  res.insert(start_node);
+
   // 替换成pq距离
   start_node.dist =
       get_pq_dist(query_pq_code.data(), get_pq_code(centroid_idx), M);
   //初始化
 
   q.push(start_node);
+  topL.insert(start_node);
   visit.insert(centroid_idx);
 
   // clock cache 的handle，用于后续释放
@@ -448,7 +453,14 @@ std::vector<int32_t> DiskIndex<T>::search_with_pq(T* query, size_t K, size_t L,
       not_hit++;
     }
     // async read uncached block
-    if (not uncached_blocks.empty()) reader.read(uncached_blocks, ctx);
+    if (not uncached_blocks.empty()) {
+      auto st = std::chrono::high_resolution_clock::now();
+      // async read uncached block
+      reader.read(uncached_blocks, ctx);
+      std::chrono::duration<double, std::milli> diff =
+          std::chrono::high_resolution_clock::now() - st;
+      read_tc += diff.count();
+    }
 
     // process cached block
     for (size_t i = 0; i < cached_idx.size(); i++) {
@@ -480,11 +492,11 @@ std::vector<int32_t> DiskIndex<T>::search_with_pq(T* query, size_t K, size_t L,
         // 查表，得到pq code
         auto* nei_pq_code = get_pq_code(neighbors[j]);
         // 计算pq距离
-        auto pq_dis = get_pq_dist(nei_pq_code, query_pq_code.data(), sdim);
+        auto pq_dis = get_pq_dist(nei_pq_code, query_pq_code.data(), M);
         // 减枝
         if (topL.size() == L && pq_dis >= topL.begin()->dist) continue;
         Node nd;
-        nd.dist = pq_dis;
+        nd.idx = neighbors[j];
         nd.dist = pq_dis;
         // 入队列
         q.push(nd);
@@ -525,11 +537,11 @@ std::vector<int32_t> DiskIndex<T>::search_with_pq(T* query, size_t K, size_t L,
         // 查表，得到pq code
         auto* nei_pq_code = get_pq_code(neighbors[j]);
         // 计算pq距离
-        auto pq_dis = get_pq_dist(nei_pq_code, query_pq_code.data(), sdim);
+        auto pq_dis = get_pq_dist(nei_pq_code, query_pq_code.data(), M);
         // 减枝
         if (topL.size() == L && pq_dis >= topL.begin()->dist) continue;
         Node nd;
-        nd.dist = pq_dis;
+        nd.idx = neighbors[j];
         nd.dist = pq_dis;
         // 入队列
         q.push(nd);
@@ -560,9 +572,11 @@ std::vector<int32_t> DiskIndex<T>::search_with_pq(T* query, size_t K, size_t L,
 
   ret.reserve(K);
 
-  auto iter = topL.rbegin();
+  auto iter = res.rbegin();
   while (K--) {
-    if (iter == topL.rend()) break;
+    if (iter == res.rend()) break;
+    std::cout << fmt::format("-- top res id: {}, dist: {}\n", iter->idx,
+                             iter->dist);
     ret.emplace_back(iter->idx);
     iter++;
   }
