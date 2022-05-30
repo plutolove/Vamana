@@ -107,6 +107,9 @@ class DiskIndex : boost::noncopyable {
 
   std::vector<int32_t> search(T* query, size_t K, size_t L, size_t width);
 
+  std::vector<int32_t> search_with_pq(T* query, size_t K, size_t L,
+                                      size_t width);
+
  protected:
   std::string path;
   std::string pq_index_path;

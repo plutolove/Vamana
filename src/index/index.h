@@ -100,7 +100,7 @@ class VamanaIndex {
 
   void occlude_list(std::vector<PI>& pool, float alpha, size_t degree,
                     size_t maxc, std::vector<PI>& result,
-                    std::vector<float>& occlude_factor);
+                    std::vector<T>& occlude_factor);
 
   void prune_neighbors(size_t node_idx, size_t R, size_t C, float alpha,
                        std::vector<PI>& node_list,

@@ -200,7 +200,7 @@ void VamanaIndex<T>::build() {
           std::vector<size_t> new_out;
           for (auto& v : _graph[node_idx]) {
             if (visit_idx.find(v) == visit_idx.end() && v != node_idx) {
-              float dist =
+              auto dist =
                   option.calc(vec_ptr[node_idx], vec_ptr[v], option.dim);
               visit.emplace_back(std::make_pair(dist, v));
               visit_idx.insert(v);
@@ -226,7 +226,7 @@ void VamanaIndex<T>::build() {
       std::vector<size_t> new_out;
       for (auto& v : _graph[node_idx]) {
         if (visit_idx.find(v) == visit_idx.end() && v != node_idx) {
-          float dist = option.calc(vec_ptr[node_idx], vec_ptr[v], option.dim);
+          auto dist = option.calc(vec_ptr[node_idx], vec_ptr[v], option.dim);
           visit.emplace_back(std::make_pair(dist, v));
           visit_idx.insert(v);
         }
@@ -264,7 +264,7 @@ template <typename T>
 void VamanaIndex<T>::occlude_list(std::vector<PI>& node_list, float alpha,
                                   size_t degree, size_t maxc,
                                   std::vector<PI>& result) {
-  std::vector<float> occlude_factor(node_list.size(), 0);
+  std::vector<T> occlude_factor(node_list.size(), 0);
   occlude_list(node_list, alpha, degree, maxc, result, occlude_factor);
 }
 
@@ -272,7 +272,7 @@ template <typename T>
 void VamanaIndex<T>::occlude_list(std::vector<PI>& node_list, float alpha,
                                   size_t degree, size_t maxc,
                                   std::vector<PI>& result,
-                                  std::vector<float>& occlude_factor) {
+                                  std::vector<T>& occlude_factor) {
   if (node_list.empty()) return;
   float cur_alpha = 1;
   while (cur_alpha <= alpha && result.size() < degree) {
@@ -289,7 +289,7 @@ void VamanaIndex<T>::occlude_list(std::vector<PI>& node_list, float alpha,
       for (size_t t = start + 1; t < node_list.size() && t < maxc; t++) {
         // alpha * dist(p*, p') < dist(p, p')  -> remove(p')
         if (occlude_factor[t] > alpha) continue;
-        float dist = option.calc(vec_ptr[p.second],
+        auto dist = option.calc(vec_ptr[p.second],
                                  vec_ptr[node_list[t].second], option.dim);
 
         occlude_factor[t] =
@@ -464,7 +464,7 @@ void VamanaIndex<T>::gen_pq_index(const std::string& path) {
                       option.sdim);
 
     kmeans_cluster(sub_data.get(), size, option.sdim, cent_data.get(),
-                   option.ksub, 12);
+                   option.ksub, 50);
 
     centroid_list.emplace_back(cent_data);
   }

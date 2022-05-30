@@ -17,6 +17,7 @@
 #include "block_pool.h"
 #include "common/define.h"
 #include "disk_index.h"
+#include "util/math_util.h"
 
 namespace vamana {
 
@@ -103,7 +104,7 @@ void DiskIndex<T>::init_static_cache(size_t hop, io_context_t ctx) {
     } else {
       cur_block = iter->second;
     }
-    float* ptr = cur_block->getPtr<float>(vec_offset(head.first));
+    T* ptr = cur_block->getPtr<T>(vec_offset(head.first));
 
     int32_t num_neighbors =
         cur_block->getNeighborSize(num_neighbors_offset(head.first));
@@ -233,7 +234,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
         // 从used_block中获取对应的block
         auto* cur_block = used_block[block_idx];
         if (visit.count(id)) continue;
-        auto* vec_ptr = cur_block->getPtr<float>(vec_offset(id));
+        auto* vec_ptr = cur_block->getPtr<T>(vec_offset(id));
         T dist = calc(query, vec_ptr, dim);
         if (topL.size() == L && dist >= topL.begin()->dist) continue;
         int32_t num_neighbors =
@@ -260,7 +261,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
         auto id = uncached_idx[i];
         auto* cur_block = uncached_blocks[i];
         if (visit.count(id)) continue;
-        auto* vec_ptr = cur_block->getPtr<float>(vec_offset(id));
+        auto* vec_ptr = cur_block->getPtr<T>(vec_offset(id));
         T dist = calc(query, vec_ptr, dim);
         // 距离大于等于topL中最大的则跳过
         if (topL.size() == L && dist >= topL.begin()->dist) continue;
@@ -343,6 +344,242 @@ void DiskIndex<T>::load_pq_index(const std::string& pq_index_path) {
   }
 
   fin.close();
+}
+
+template <typename T>
+std::vector<int32_t> DiskIndex<T>::search_with_pq(T* query, size_t K, size_t L,
+                                                  size_t width) {
+  // block对象池，如果block不在cache中，从对象池分配block然后异步读
+  static auto& block_pool = BlockPool::getInstance();
+
+  io_context_t ctx = 0;
+  if (not io_contexts.pop(ctx)) {
+    ctx = 0;
+    int ret = io_setup(MAX_EVENTS, &ctx);
+    if (ret != 0) {
+      std::cout << fmt::format("io_setup() error, ret: {}, status: {}", ret,
+                               strerror(ret))
+                << std::endl;
+      return {};
+    }
+  }
+
+  // 计算查询的点的pq code
+  auto query_pq_code = compute_pq_code(query, cluster_centers, sdim);
+
+  double read_tc = 0;
+
+  std::vector<int32_t> ret;
+  // 小根堆加速优化bfs搜索，每次取dist最小的node进行搜索
+  std::priority_queue<Node> q;
+  // 用于保存最后topL的结果，同时可以减枝
+  // 距离大于topL biggest dist的node不再搜索
+  std::set<Node> topL;
+  std::set<Node> res;
+  std::unordered_set<int32_t> visit;
+
+  auto start_node = genStartNode(query);
+  res.insert(start_node);
+
+  // 替换成pq距离
+  start_node.dist =
+      get_pq_dist(query_pq_code.data(), get_pq_code(centroid_idx), M);
+  //初始化
+
+  q.push(start_node);
+  topL.insert(start_node);
+  visit.insert(centroid_idx);
+
+  // clock cache 的handle，用于后续释放
+  std::vector<SharedBlockCache::CacheHandle*> handles;
+  // 保存所有本次请求用到的block ptr
+  std::unordered_map<int32_t, BlockPtr> used_block;
+  size_t hit = 0;
+  size_t not_hit = 0;
+  while (not q.empty()) {
+    std::vector<BlockPtr> uncached_blocks;
+    std::vector<int32_t> uncached_idx;
+    std::vector<int32_t> cached_idx;
+    std::vector<int32_t> cached_blockid;
+
+    size_t search_cnt = 0;
+    // beam search，一次出队列最多width + 2个node
+    // uncached block最多 width个
+    while (not q.empty() and uncached_blocks.size() < width and
+           search_cnt < width * 2) {
+      Node top = q.top();
+      search_cnt++;
+      q.pop();
+      auto neighbors_id = top.idx;
+      auto block_idx = block_id(neighbors_id);
+      // 当前的id如果在之前用到的block中，则不再读取cache，直接从used_block中取
+      auto it = used_block.find(block_idx);
+      if (it != used_block.end()) {
+        cached_idx.emplace_back(neighbors_id);
+        cached_blockid.emplace_back(block_idx);
+        hit++;
+        continue;
+      }
+      // if block cache get block
+      // cached_blocks push_back
+      // 3跳的cache
+      auto iter = static_cache.find(block_idx);
+      if (iter != static_cache.end()) {
+        cached_idx.emplace_back(neighbors_id);
+        used_block[block_idx] = iter->second;
+        cached_blockid.emplace_back(block_idx);
+        hit++;
+        continue;
+      }
+      // block cache
+      auto handle = clock_cache->find(block_idx);
+      if (handle) {
+        cached_idx.emplace_back(neighbors_id);
+        cached_blockid.emplace_back(block_idx);
+        used_block[block_idx] = handle->value;
+        handles.emplace_back(handle);
+        hit++;
+        continue;
+      }
+      // uncached_blocks
+      auto new_block = block_pool.getSingleBlockPtr();
+      new_block->idx = block_idx;
+      new_block->start = block_offset(neighbors_id);
+      new_block->len = BLOCK_SIZE;
+      uncached_blocks.emplace_back(new_block);
+      uncached_idx.emplace_back(neighbors_id);
+      not_hit++;
+    }
+    // async read uncached block
+    if (not uncached_blocks.empty()) {
+      auto st = std::chrono::high_resolution_clock::now();
+      // async read uncached block
+      reader.read(uncached_blocks, ctx);
+      std::chrono::duration<double, std::milli> diff =
+          std::chrono::high_resolution_clock::now() - st;
+      read_tc += diff.count();
+    }
+
+    // process cached block
+    for (size_t i = 0; i < cached_idx.size(); i++) {
+      auto id = cached_idx[i];
+      auto block_idx = cached_blockid[i];
+      // 从used_block中获取对应的block
+      auto* cur_block = used_block[block_idx];
+      auto* vec_ptr = cur_block->getPtr<T>(vec_offset(id));
+      T dist = calc(query, vec_ptr, dim);
+      // 最终结果用精确距离来判断
+      Node v;
+      v.idx = id;
+      v.dist = dist;
+      res.insert(v);
+      if (res.size() > L) {
+        auto iter = res.begin();
+        res.erase(*iter);
+      }
+
+      // 获取该节点的邻居
+      int32_t num_neighbors =
+          cur_block->getNeighborSize(num_neighbors_offset(id));
+      int32_t* neighbors = cur_block->getPtr<int32_t>(neighbors_offset(id));
+      // 遍历所有邻居
+      for (size_t j = 0; j < num_neighbors; j++) {
+        // 访问过的跳过
+        if (visit.count(neighbors[j])) continue;
+        visit.insert(neighbors[j]);
+        // 查表，得到pq code
+        auto* nei_pq_code = get_pq_code(neighbors[j]);
+        // 计算pq距离
+        auto pq_dis = get_pq_dist(nei_pq_code, query_pq_code.data(), M);
+        // 减枝
+        if (topL.size() == L && pq_dis >= topL.begin()->dist) continue;
+        Node nd;
+        nd.idx = neighbors[j];
+        nd.dist = pq_dis;
+        // 入队列
+        q.push(nd);
+        // 加入topL候选
+        topL.insert(nd);
+        if (topL.size() > L) {
+          auto iter = topL.begin();
+          topL.erase(*iter);
+        }
+      }
+    }
+    // process uncached block
+    for (size_t i = 0; i < uncached_idx.size(); i++) {
+      auto id = uncached_idx[i];
+      // 从used_block中获取对应的block
+      auto* cur_block = uncached_blocks[i];
+      auto* vec_ptr = cur_block->getPtr<T>(vec_offset(id));
+      T dist = calc(query, vec_ptr, dim);
+      // 最终结果用精确距离来判断
+      Node v;
+      v.idx = id;
+      v.dist = dist;
+      res.insert(v);
+      if (res.size() > L) {
+        auto iter = res.begin();
+        res.erase(*iter);
+      }
+
+      // 获取该节点的邻居
+      int32_t num_neighbors =
+          cur_block->getNeighborSize(num_neighbors_offset(id));
+      int32_t* neighbors = cur_block->getPtr<int32_t>(neighbors_offset(id));
+      // 遍历所有邻居
+      for (size_t j = 0; j < num_neighbors; j++) {
+        // 访问过的跳过
+        if (visit.count(neighbors[j])) continue;
+        visit.insert(neighbors[j]);
+        // 查表，得到pq code
+        auto* nei_pq_code = get_pq_code(neighbors[j]);
+        // 计算pq距离
+        auto pq_dis = get_pq_dist(nei_pq_code, query_pq_code.data(), M);
+        // 减枝
+        if (topL.size() == L && pq_dis >= topL.begin()->dist) continue;
+        Node nd;
+        nd.idx = neighbors[j];
+        nd.dist = pq_dis;
+        // 入队列
+        q.push(nd);
+        // 加入topL候选
+        topL.insert(nd);
+        if (topL.size() > L) {
+          auto iter = topL.begin();
+          topL.erase(*iter);
+        }
+      }
+
+      // insert cache，not success recycle block
+      if (not clock_cache->insert(cur_block->idx, cur_block)) {
+        block_pool.recycle(cur_block);
+      }
+    }
+  }
+
+  // 回收ctx
+  if (not io_contexts.push(ctx)) {
+    io_destroy(ctx);
+  }
+
+  // 释放block cache
+  for (auto& handle : handles) {
+    clock_cache->release(handle);
+  }
+
+  ret.reserve(K);
+
+  auto iter = res.rbegin();
+  while (K--) {
+    if (iter == res.rend()) break;
+    ret.emplace_back(iter->idx);
+    iter++;
+  }
+
+  std::cout << fmt::format("read block time cost: {}\n", read_tc);
+  // std::cout << fmt::format("hit: {}, not_hit: {}\n", hit, not_hit);
+  return ret;
 }
 
 template class DiskIndex<float>;
