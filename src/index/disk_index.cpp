@@ -104,7 +104,7 @@ void DiskIndex<T>::init_static_cache(size_t hop, io_context_t ctx) {
     } else {
       cur_block = iter->second;
     }
-    float* ptr = cur_block->getPtr<float>(vec_offset(head.first));
+    T* ptr = cur_block->getPtr<T>(vec_offset(head.first));
 
     int32_t num_neighbors =
         cur_block->getNeighborSize(num_neighbors_offset(head.first));
@@ -234,7 +234,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
         // 从used_block中获取对应的block
         auto* cur_block = used_block[block_idx];
         if (visit.count(id)) continue;
-        auto* vec_ptr = cur_block->getPtr<float>(vec_offset(id));
+        auto* vec_ptr = cur_block->getPtr<T>(vec_offset(id));
         T dist = calc(query, vec_ptr, dim);
         if (topL.size() == L && dist >= topL.begin()->dist) continue;
         int32_t num_neighbors =
@@ -261,7 +261,7 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
         auto id = uncached_idx[i];
         auto* cur_block = uncached_blocks[i];
         if (visit.count(id)) continue;
-        auto* vec_ptr = cur_block->getPtr<float>(vec_offset(id));
+        auto* vec_ptr = cur_block->getPtr<T>(vec_offset(id));
         T dist = calc(query, vec_ptr, dim);
         // 距离大于等于topL中最大的则跳过
         if (topL.size() == L && dist >= topL.begin()->dist) continue;
@@ -305,8 +305,6 @@ std::vector<int32_t> DiskIndex<T>::search(T* query, size_t K, size_t L,
   auto iter = topL.rbegin();
   while (K--) {
     if (iter == topL.rend()) break;
-    std::cout << fmt::format("top res id: {}, dist: {}\n", iter->idx,
-                             iter->dist);
     ret.emplace_back(iter->idx);
     iter++;
   }
@@ -468,7 +466,7 @@ std::vector<int32_t> DiskIndex<T>::search_with_pq(T* query, size_t K, size_t L,
       auto block_idx = cached_blockid[i];
       // 从used_block中获取对应的block
       auto* cur_block = used_block[block_idx];
-      auto* vec_ptr = cur_block->getPtr<float>(vec_offset(id));
+      auto* vec_ptr = cur_block->getPtr<T>(vec_offset(id));
       T dist = calc(query, vec_ptr, dim);
       // 最终结果用精确距离来判断
       Node v;
@@ -513,7 +511,7 @@ std::vector<int32_t> DiskIndex<T>::search_with_pq(T* query, size_t K, size_t L,
       auto id = uncached_idx[i];
       // 从used_block中获取对应的block
       auto* cur_block = uncached_blocks[i];
-      auto* vec_ptr = cur_block->getPtr<float>(vec_offset(id));
+      auto* vec_ptr = cur_block->getPtr<T>(vec_offset(id));
       T dist = calc(query, vec_ptr, dim);
       // 最终结果用精确距离来判断
       Node v;
@@ -575,8 +573,6 @@ std::vector<int32_t> DiskIndex<T>::search_with_pq(T* query, size_t K, size_t L,
   auto iter = res.rbegin();
   while (K--) {
     if (iter == res.rend()) break;
-    std::cout << fmt::format("-- top res id: {}, dist: {}\n", iter->idx,
-                             iter->dist);
     ret.emplace_back(iter->idx);
     iter++;
   }

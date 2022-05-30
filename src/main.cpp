@@ -22,15 +22,15 @@
 
 DEFINE_uint64(N, 80000, "data size");
 DEFINE_uint64(dim, 100, "vector dim");
-DEFINE_uint64(L, 35, "search L size");
-DEFINE_uint64(R, 25, "graph degree");
+DEFINE_uint64(L, 40, "search L size");
+DEFINE_uint64(R, 35, "graph degree");
 DEFINE_string(data_path, "../data/data.bin", "input data file path");
 DEFINE_string(index_path, "../data/index.bin", "index save path");
 DEFINE_string(teat_data_path, "../data/test.bin", "test data path");
 DEFINE_int32(thread_num, 16, "openmp thread num");
 using namespace vamana;
 
-const int TEST_SIZE = 1;
+const int TEST_SIZE = 1000;
 
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -47,14 +47,16 @@ int main(int argc, char** argv) {
   option.test_file = FLAGS_teat_data_path;
   option.thread_num = FLAGS_thread_num;
   option.test_N = 20000;
-  option.M = 10;
+  option.M = 20;
   option.sdim = option.dim / option.M;
   VamanaIndex<float> index(option);
-  // index.gen_pq_index("../data/pq_index.bin");
+
+  index.build();
+  index.save_disk_index("../data/disk_index.bin");
+  index.gen_pq_index("../data/pq_index.bin");
+
   DiskIndex<float> dindex("../data/disk_index.bin", "../data/pq_index.bin", 8,
                           128, 3);
-  // index.build();
-  // index.save_disk_index("../data/disk_index.bin");
   // index.load_disk_index("../data/disk_index.bin");
   // index.save_index();
   // index.load_index();
@@ -82,24 +84,34 @@ int main(int argc, char** argv) {
 
   auto s = std::chrono::high_resolution_clock::now();
   double time_cost[TEST_SIZE];
+  size_t not_same[TEST_SIZE];
+  size_t same[TEST_SIZE];
+  std::memset(not_same, 0, sizeof(not_same));
+  std::memset(same, 0, sizeof(same));
 #pragma omp parallel for schedule(dynamic, 1)
   for (size_t i = 0; i < TEST_SIZE; i++) {
+    auto ret = index.forceSearch(_test_ptr[i]);
     auto st = std::chrono::high_resolution_clock::now();
-    auto ret = dindex.search(_test_ptr[73], 2, option.L + 5, 4);
-    auto res = dindex.search_with_pq(_test_ptr[73], 2, option.L + 5, 4);
+    auto res = dindex.search_with_pq(_test_ptr[i], 2, option.L + 5, 4);
 
     std::chrono::duration<double, std::milli> diff =
         std::chrono::high_resolution_clock::now() - st;
     time_cost[i] = diff.count();
-    std::cout << fmt::format("search: {}, search_with_pq: {}\n", ret[0],
-                             res[0]);
+    if (ret == res[0])
+      same[i] = 1;
+    else
+      not_same[i] = 1;
   }
   std::chrono::duration<double> diff =
       std::chrono::high_resolution_clock::now() - s;
   double res = 0;
+  size_t same_s = 0, nsame_s = 0;
   for (size_t i = 0; i < TEST_SIZE; i++) {
     res += time_cost[i];
+    same_s += same[i];
+    nsame_s += not_same[i];
   }
+  std::cout << fmt::format("search same: {}, diff: {}\n", same_s, nsame_s);
   std::cout << fmt::format("search time cost avg: {}\n", res / TEST_SIZE);
   std::cout << fmt::format("search time cost: {}s\n", diff.count());
   delete[] _test;
