@@ -18,3 +18,8 @@ mkdir build && cmake .. && make
   * cluster_num 个 sdim大小的vec，表示聚类中心的vec
   * cluster_num * cluster_num的数组，表示每个聚类中心的距离
 * 接下来是N*M的uint8，表示每个点的pq code
+
+
+"-Wno-array-parameter",
+    "-Wno-array-bounds",
+https://github.com/clearlinux/distribution/issues/1151
